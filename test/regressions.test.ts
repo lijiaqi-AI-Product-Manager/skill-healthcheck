@@ -12,7 +12,7 @@ import { Store } from '../src/journal.js'
 import { detectPlatform } from '../src/platforms.js'
 import { checkJson } from '../src/report.js'
 import { catalogTimeline, loadSessions, type SessionSummary } from '../src/sessions.js'
-import { isSafeGitUrl, redactUrl } from '../src/upstream.js'
+import { isSafeGitUrl, redactText, redactUrl } from '../src/upstream.js'
 import { matchSymptoms, why } from '../src/why.js'
 import { gitRun, sandbox, skillMd, upstreamRepo, write } from './helpers.js'
 
@@ -122,6 +122,7 @@ describe('upstream comparison', () => {
 
   it('redacts credentials before a source URL is printed or serialized', () => {
     expect(redactUrl('https://user:ghp_secret@github.com/o/r.git')).toBe('https://***@github.com/o/r.git')
+    expect(redactText("fatal: unable to access 'https://user:ghp_secret@github.com/o/r.git/'")).not.toContain('ghp_secret')
     expect(isSafeGitUrl('ssh://-oProxyCommand=evil')).toBe(false)
     expect(isSafeGitUrl('git@-oProxyCommand=evil:x.git')).toBe(false)
   })

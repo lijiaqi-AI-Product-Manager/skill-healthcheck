@@ -166,6 +166,11 @@ export function redactUrl(url: string): string {
   return url.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/@]+@/i, '$1***@')
 }
 
+/** The same, for a sentence that embeds a URL (git puts the remote in its stderr). */
+export function redactText(text: string): string {
+  return text.replace(/([a-z][a-z0-9+.-]*:\/\/)[^/@\s]+@/gi, '$1***@')
+}
+
 export function redactProvenance(p: Provenance): Provenance {
   return p.kind === 'git' ? { ...p, url: redactUrl(p.url) } : p
 }
@@ -223,7 +228,7 @@ export class UpstreamChecker {
     if (!existsSync(gitDir)) {
       mkdirSync(join(this.store.dir, 'cache'), { recursive: true })
       const init = await git(['init', '--bare', '--quiet', gitDir])
-      if (!init.ok) return { ok: false, result: { state: 'unreachable', detail: firstLine(init.stderr) } }
+      if (!init.ok) return { ok: false, result: { state: 'unreachable', detail: redactText(firstLine(init.stderr)) } }
     }
     this.options.onFetch?.(url)
     // Fetch into our own ref rather than FETCH_HEAD, which the next fetch would overwrite.
@@ -234,7 +239,7 @@ export class UpstreamChecker {
     )
     if (!fetched.ok) return { ok: false, result: await classifyFetchFailure(url, fetched.stderr) }
     const head = await git(['--git-dir', gitDir, 'rev-parse', '--verify', `${local}^{commit}`])
-    if (!head.ok) return { ok: false, result: { state: 'unreachable', detail: firstLine(head.stderr) } }
+    if (!head.ok) return { ok: false, result: { state: 'unreachable', detail: redactText(firstLine(head.stderr)) } }
     return { ok: true, gitDir, commit: head.stdout.trim() }
   }
 }
@@ -298,7 +303,7 @@ async function compareSkill(repo: FetchedRepo, skill: InstalledSkill, prov: Extr
   if (shown.ok) return diffAgainstLocal(repo, skill, prov, prov.subpath, shown.raw)
   // A failed `git show` is "the path is gone" only for a specific class of errors. A blob
   // fetch that failed (blobless clone + flaky network) must never read as a deletion.
-  if (!isMissingPath(shown.stderr)) return { state: 'unreachable', detail: firstLine(shown.stderr) }
+  if (!isMissingPath(shown.stderr)) return { state: 'unreachable', detail: redactText(firstLine(shown.stderr)) }
   // Path is gone upstream: moved/renamed or deleted? git's own rename detection goes first:
   // a renamed *and* rewritten skill still shows up as R087, where line similarity would not.
   const movedFile = (await findRenamedPath(gitDir, commit, file)) ?? (await findMovedSkill(gitDir, commit, skill))
@@ -491,7 +496,7 @@ export function similarity(a: string, b: string): number {
 }
 
 async function classifyFetchFailure(url: string, stderr: string): Promise<UpstreamResult> {
-  const detail = firstLine(stderr.replace(/^(remote|fatal): /gm, ''))
+  const detail = redactText(firstLine(stderr.replace(/^(remote|fatal): /gm, '')))
   // A local source path: a typo is a configuration problem, not "the repository was deleted".
   // Keep it informational so a stray metadata.source never turns CI red.
   if (isAbsolute(url) || /^file:\/\//i.test(url)) {
