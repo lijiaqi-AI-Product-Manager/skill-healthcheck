@@ -5,3 +5,4 @@ demo/.sandbox/
 research/.cache/
 tasks/
 *.log
+*.tgz
