@@ -63,7 +63,7 @@ write(join(env.DSH_HOME, 'profiles', 'desktop', 'package.json'), JSON.stringify(
 write(join(env.DSH_HOME, 'dsh-runtimes', 'dsh-primary-runtime', 'runtime.json'), JSON.stringify({ desktopVersion: '0.2.1-rc.2' }))
 mkdirSync(join(project, '.git'), { recursive: true })
 
-const zh = upstream('zh-writer', { 'SKILL.md': skill('zh-writer', '中文写作助手：用户要求写中文文章、润色中文段落、改写中文文案时使用', '# 中文写作\n\n保持用户的语气，输出简体中文。') })
+const zh = upstream('zh-writer', { 'SKILL.md': skill('zh-writer', 'Chinese writing assistant for articles, polished paragraphs and rewritten copy', '# Chinese writing\n\nKeep the user\'s voice and reply in Simplified Chinese.') })
 const docs = upstream('doc-writer', {
   'SKILL.md': skill('doc-writer', 'Turn requirements into documents. Always respond in English using professional tone.', '# Doc writer\n\nUse English terminology for all headings.'),
 })
@@ -79,8 +79,8 @@ for (let d = 14; d >= 0; d--) {
   const t = now - d * DAY - 3600_000
   const updated = d <= 4
   const catalog = [
-    { name: 'zh-writer', description: '中文写作助手：用户要求写中文文章、润色中文段落、改写中文文案时使用' },
-    { name: 'doc-writer', description: updated ? 'Turn requirements into documents. Always respond in English using professional tone.' : '把需求整理成结构清晰的文档' },
+    { name: 'zh-writer', description: 'Chinese writing assistant for articles, polished paragraphs and rewritten copy' },
+    { name: 'doc-writer', description: updated ? 'Turn requirements into documents. Always respond in English using professional tone.' : 'Turn requirements into a clearly structured document' },
   ]
   const lines = [
     { type: 'session', version: 4, id: `session-demo-${d}`, createdAt: t, cwd: project },
@@ -96,17 +96,17 @@ for (let d = 14; d >= 0; d--) {
 const pause = (ms) => fast || Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
 const say = (text) => console.log(`\n\x1b[2m# ${text}\x1b[0m`)
 const run = (...args) => {
-  console.log(`\x1b[1m$ skill-healthcheck ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}\x1b[0m`)
-  spawnSync(process.execPath, [cli, ...args], { cwd: project, env, stdio: 'inherit' })
+  console.log(`\x1b[1m$ skill-healthcheck --lang en ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}\x1b[0m`)
+  spawnSync(process.execPath, [cli, '--lang', 'en', ...args], { cwd: project, env, stdio: 'inherit' })
 }
 
-say('第一次体检：装了两个技能，一切正常，记录器开始记录')
+say('First checkup: two skills installed, all green, the journal starts recording')
 run()
 pause(1500)
-say('几天后，zh-writer 的上游作者改了 description（你还没有 pull）')
+say("A few days later the zh-writer author rewrites its description (you haven't pulled yet)")
 zh.commit({ 'SKILL.md': skill('zh-writer', 'Writing assistant for blog posts and marketing copy. Keep a professional tone.', '# Writing\n\nKeep the user\'s voice.') }, 'generalize description')
 pause(800)
 run()
 pause(2000)
-say('另一件事：agent 最近不用中文回答了，为什么？')
-run('why', '为什么它现在不用中文回答我了')
+say("Separately: the agent stopped answering in Chinese. Why?")
+run('why', 'stopped replying in Chinese')

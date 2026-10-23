@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 import { runCheck, scanAndRecord, type CheckOptions } from './check.js'
 import { nowMs } from './env.js'
+import { installOutputTranslation, setLang } from './i18n.js'
 import type { JournalEvent } from './journal.js'
 import { c, checkJson, renderCheck, renderDetails, renderInventory, renderJournal, renderWhy } from './report.js'
 import { catalogTimeline, loadSessions } from './sessions.js'
@@ -52,10 +53,13 @@ async function main(argv: string[]): Promise<number> {
       name: { type: 'string' },
       repo: { type: 'string' },
       force: { type: 'boolean' },
+      lang: { type: 'string' },
       help: { type: 'boolean', short: 'h' },
       version: { type: 'boolean', short: 'v' },
     },
   })
+  setLang(values.lang as string | undefined)
+  installOutputTranslation()
   if (values.help) {
     console.log(HELP)
     return 0

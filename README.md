@@ -15,7 +15,7 @@ English | [中文](README.zh.md) | [日本語](README.ja.md) | [한국어](READM
 </p>
 
 <p align="center">
-  <img src="docs/demo.en.gif" alt="skill-healthcheck demo: a skill's description changes upstream, and why attributes the behavior change" width="900">
+  <img src="docs/demo.gif" alt="skill-healthcheck demo: a skill's description changes upstream, and why attributes the behavior change" width="900">
 </p>
 
 > Has your agent gotten dumber lately? It might be the skill you installed three weeks ago.
@@ -29,22 +29,30 @@ When a plugin breaks, you know immediately: it won't install, it throws errors, 
 One command, one checkup, one screen of output. Read-only, and it never updates anything by itself.
 
 ```text
-$ skill-healthcheck
-skill-healthcheck · DeepSeek Harness · profile desktop · 2026-10-23 11:57
-宿主  dsh 0.2.1-rc.2 ✓
-插件  0：0 正常 · 0 可升级 · 0 失效  另有组合包 1 个
-技能  2：1 正常 · 1 有更新 · 0 失效
-      ↑ zh-writer        上游改了 description：删去 "中文" "写作" "助手"，新增 "professional" "assistant" "marketing"  ⚠最高危
-结论：技能 1 个需你逐个确认
+$ skill-healthcheck --lang en
+skill-healthcheck · DeepSeek Harness · profile desktop · 2026-10-23 18:57
+Host    dsh 0.2.1-rc.2 ✓
+Plugins  0: 0 ok · 0 upgradable · 0 broken  (+1 bundles)
+Skills  2: 2 ok · 0 update · 0 broken
+Summary: everything still works, nothing for you to do
+Recording started (2 events). Every run now saves what changed.
 
-$ skill-healthcheck why "为什么它现在不用中文回答我了"
-why "为什么它现在不用中文回答我了" → 回复语言变了
-现象起点：助手回复的中文占比：2026-10-19 之前约 100%，当天 0%（你仍在用中文提问）
-1. doc-writer           2026-10-19 起模型看到的 description 变了
-     新增"professional tone"
-     新增"Always respond in English"
-     删去 "需求" "整理" "结构" "清晰"
-这是按时间和关键词排的嫌疑顺序，不是定论；可以先停用第 1 名验证。
+$ skill-healthcheck --lang en
+skill-healthcheck · DeepSeek Harness · profile desktop · 2026-10-23 18:57
+Host    dsh 0.2.1-rc.2 ✓
+Plugins  0: 0 ok · 0 upgradable · 0 broken  (+1 bundles)
+Skills  2: 1 ok · 1 update · 0 broken
+      ↑ zh-writer        Upstream changed the description: removed "paragraphs" "rewritten" "articles", added "professional" "marketing" "posts"  ⚠ critical
+Summary: 1 skill needs you to review it
+
+$ skill-healthcheck --lang en why "stopped replying in Chinese"
+why "stopped replying in Chinese" → reply language changed
+Onset: share of Chinese replies: ~100% before 2026-10-19, 0% that day (you were still asking in Chinese)
+1. doc-writer           the description the model sees changed on 2026-10-19
+     added "professional tone"
+     added "Always respond in English"
+     removed "structured" "clearly"
+Ranked by time and keywords, not a verdict. Disable #1 first to confirm.
 ```
 
 (The tool's output is currently in Chinese; English output is on the roadmap.)
@@ -177,7 +185,7 @@ node scripts/corpus-eval.mjs   # run the impact rules over 74 real changes (buil
 - [x] Plugin compatibility and upgrade checks (dsh)
 - [ ] dsh plugin shell `dsh-skill-healthcheck`: record on host startup, watch skill changes, expose `/skill-healthcheck`
 - [ ] Optional `--explain`: use an LLM to turn the diff into one plain sentence (off by default)
-- [ ] English output (`--lang en`)
+- [x] English output (`--lang en`)
 
 ## License
 
