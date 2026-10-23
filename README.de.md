@@ -1,6 +1,6 @@
 # skill-healthcheck
 
-[English](README.en.md) | [中文](README.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Español](README.es.md) | [Français](README.fr.md) | Deutsch | [Português](README.pt-BR.md)
+[English](README.md) | [中文](README.zh.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Español](README.es.md) | [Français](README.fr.md) | Deutsch | [Português](README.pt-BR.md)
 
 <p align="center">
   <a href="https://github.com/lijiaqimun-coder/skill-healthcheck/actions/workflows/ci.yml"><img src="https://github.com/lijiaqimun-coder/skill-healthcheck/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/demo.gif" alt="skill-healthcheck demo: a skill's description changes upstream, and why attributes the behavior change" width="900">
+  <img src="docs/demo.de.gif" alt="skill-healthcheck demo: a skill's description changes upstream, and why attributes the behavior change" width="900">
 </p>
 
 > Dein Agent ist in letzter Zeit dümmer geworden? Vielleicht liegt es an dem Skill, das du vor drei Wochen installiert hast.

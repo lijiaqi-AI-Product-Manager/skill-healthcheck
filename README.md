@@ -1,32 +1,32 @@
 # skill-healthcheck
 
-[English](README.en.md) | 中文 | [日本語](README.ja.md) | [한국어](README.ko.md) | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md) | [Português](README.pt-BR.md)
+English | [中文](README.zh.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md) | [Português](README.pt-BR.md)
 
 <p align="center">
-  <a href="https://github.com/lijiaqimun-coder/skill-healthcheck/actions/workflows/ci.yml"><img src="https://github.com/lijiaqimun-coder/skill-healthcheck/actions/workflows/ci.yml/badge.svg" alt="CI 状态"></a>
+  <a href="https://github.com/lijiaqimun-coder/skill-healthcheck/actions/workflows/ci.yml"><img src="https://github.com/lijiaqimun-coder/skill-healthcheck/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
   <img src="https://img.shields.io/badge/node-22.19%2B-brightgreen" alt="Node 22.19+">
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT">
   <img src="https://img.shields.io/badge/platforms-linux%20%7C%20macos%20%7C%20windows-lightgrey" alt="Linux, macOS, Windows">
-  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="欢迎 PR">
+  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome">
 </p>
 
 <p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&pause=1200&color=3FB950&center=true&vCenter=true&width=720&lines=Find+skills+that+silently+stopped+working;Know+when+your+agent%27s+behavior+changed" alt="找出悄悄失效的 skill">
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&pause=1200&color=3FB950&center=true&vCenter=true&width=720&lines=Find+skills+that+silently+stopped+working;Know+when+your+agent%27s+behavior+changed" alt="Find skills that silently stopped working">
 </p>
 
 <p align="center">
-  <img src="docs/demo.gif" alt="skill-healthcheck 演示：上游改了 description，why 把行为变化归因到具体 skill" width="900">
+  <img src="docs/demo.en.gif" alt="skill-healthcheck demo: a skill's description changes upstream, and why attributes the behavior change" width="900">
 </p>
 
-> 你的 agent 最近变笨了？可能是三周前装的那个 skill。
+> Has your agent gotten dumber lately? It might be the skill you installed three weeks ago.
 
-插件坏了你马上会知道：装不上、报错、界面消失。**技能（skill）坏了你永远不知道**：`SKILL.md` 还在磁盘上，看起来一切正常，但模型再也不会用它了。原因可能是上游改了 `description`、给技能改了名、删了仓库，也可能是本地有一个同名技能把它遮住了。你只会觉得"agent 最近不听话了 / 不用中文了"，然后去怀疑模型和提示词。
+When a plugin breaks, you know immediately: it won't install, it throws errors, it vanishes from the UI. **When a skill breaks, you never find out**: `SKILL.md` is still on disk, everything looks normal, and the model simply stops using it. The upstream may have changed the `description`, renamed the skill, deleted the repo — or a local skill with the same name is shadowing it. All you notice is that "the agent stopped listening" or "it doesn't answer in Chinese anymore", and then you go blame the model and your prompts.
 
-`skill-healthcheck` 只回答一个问题：
+`skill-healthcheck` answers one question:
 
-**我装的东西现在还有用吗？没用的是哪个、从什么时候开始的？**
+**Is what I installed still working? Which piece broke, and when did it start?**
 
-一个命令、一次体检、一屏输出。它只读不写，从不自动更新。
+One command, one checkup, one screen of output. Read-only, and it never updates anything by itself.
 
 ```text
 $ skill-healthcheck
@@ -47,131 +47,137 @@ why "为什么它现在不用中文回答我了" → 回复语言变了
 这是按时间和关键词排的嫌疑顺序，不是定论；可以先停用第 1 名验证。
 ```
 
-（上面是 `npm run demo` 的真实输出：两个技能来自本地 git 仓库，会话日志是合成的。）
+(The tool's output is currently in Chinese; English output is on the roadmap.)
 
-## 安装
+(The output above is from a real `npm run demo` run: both skills come from local git repos, and the session log is synthetic.)
 
-需要 Node.js 22.19+ 和 git。
+## Install
+
+Requires Node.js 22.19+ and git.
 
 ```bash
 npm install -g skill-healthcheck
 ```
 
-还没发布到 npm 时，从源码安装：
+If it isn't on npm yet, install from source:
 
 ```bash
-git clone <this repo> && cd skill-healthcheck && npm install && npm run build && npm link
+git clone https://github.com/lijiaqimun-coder/skill-healthcheck && cd skill-healthcheck && npm install && npm run build && npm link
 ```
 
-## 用法
+## Usage
 
-| 命令                                    | 作用                                                                             |
-| --------------------------------------- | -------------------------------------------------------------------------------- |
-| `skill-healthcheck`                     | 一屏体检：宿主、插件、技能                                                       |
-| `skill-healthcheck why "<现象>"`        | 按时间线反查可疑技能，例如 `why "不用中文回答了"`；也可以用 `--since 2026-10-01` |
-| `skill-healthcheck log`                 | 记录：装了什么、改了什么、什么时候（`~` 表示时间按文件时间估计）                 |
-| `skill-healthcheck ls`                  | 平台实际会加载哪些技能，哪些被遮蔽、被丢弃                                       |
-| `skill-healthcheck adopt <name> <来源>` | 登记技能来源：`github:owner/repo/path`、GitHub 链接或 `<git-url>#<path>`         |
-| `skill-healthcheck record`              | 只记录一次快照（给钩子、定时任务用）                                             |
+| Command                                   | What it does                                                                                                                  |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `skill-healthcheck`                       | One-screen checkup: host, plugins, skills                                                                                     |
+| `skill-healthcheck why "<symptom>"`       | Work backward along the timeline to suspicious skills, e.g. `why "不用中文回答了"`; also accepts `--since 2026-10-01`         |
+| `skill-healthcheck log`                   | Journal of what was installed, what changed, and when (`~` marks times estimated from file mtimes)                            |
+| `skill-healthcheck ls`                    | Which skills the platform will actually load, which are shadowed, which are dropped                                           |
+| `skill-healthcheck adopt --repo <repo>`   | Register sources in bulk: match local skills to the repo's skills by name and content, e.g. `--repo github:anthropics/skills` |
+| `skill-healthcheck adopt <name> <source>` | Register one skill's source: `github:owner/repo/path`, a GitHub URL, or `<git-url>#<path>`                                    |
+| `skill-healthcheck record`                | Record a single snapshot (for hooks and scheduled jobs)                                                                       |
 
-通用选项：`--all` 展开全部、`--json` 机器可读、`--offline` 不联网、`--no-sessions` 不读会话日志、`--platform dsh|generic`、`--profile <名字>`、`--cwd <项目目录>`。
+Common options: `--all` expand everything, `--json` machine-readable, `--offline` no network, `--no-sessions` skip session logs, `--platform dsh|generic`, `--profile <name>`, `--cwd <project dir>`.
 
-`check` 发现失效项时退出码为 1，可以放进 CI。
+Exit codes: `0` all good (available updates count as good), `1` something is broken (including dropped, shadowed, or too-deeply-nested skills and broken plugins), `2` usage error. Drop it straight into CI.
 
-## 它检查什么
+Copied your skills over without their `.git`? Run `skill-healthcheck adopt --repo <the repo they came from>` once so upstream checks can work. Skills whose folder was renamed are matched by content.
 
-**技能：本地（离线，确定性）**
+## What it checks
 
-| 问题                                                                 | 为什么会静默失效                                                   |
-| -------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| frontmatter 不合法（name 不是 kebab-case、布尔值写错、用了旧字段名） | dsh 直接丢弃整个技能，只在日志里打一行警告                         |
-| 同名遮蔽                                                             | 项目级 `.dsh/skills` 里的同名技能会盖住你全局装的那个              |
-| 嵌套太深                                                             | 只认 `<根>/<名>/SKILL.md`；把整个技能仓库 clone 进去，一个都不生效 |
-| 放错目录                                                             | dsh 不扫描 `~/.claude/skills`、`~/.codex/skills`                   |
-| description 超过 500 字符                                            | 目录里被截断，结尾的触发词模型看不到                               |
-| 曾经常用、某天之后再没调用过                                         | 从会话日志里看到的证据，比任何推断都硬                             |
+**Skills: local (offline, deterministic)**
 
-**技能：上游（git，任何托管平台）**
+| Problem                                                                                         | Why it fails silently                                                                                       |
+| ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Invalid frontmatter (name isn't kebab-case, a boolean is misspelled, an old field name is used) | dsh drops the entire skill and only logs a single warning line                                              |
+| Shadowed by a same-name skill                                                                   | A skill of the same name under the project-level `.dsh/skills` shadows the one you installed globally       |
+| Nested too deep                                                                                 | Only `<root>/<name>/SKILL.md` is recognized; clone a whole skill repo in there and none of them take effect |
+| Wrong directory                                                                                 | dsh doesn't scan `~/.claude/skills` or `~/.codex/skills`                                                    |
+| description over 500 characters                                                                 | It gets truncated in the catalog, so the model never sees the trigger words at the end                      |
+| Used to be invoked often, then one day never again                                              | Evidence from the session log beats any inference                                                           |
 
-| 上游变化                   | 影响                                                                                  |
-| -------------------------- | ------------------------------------------------------------------------------------- |
-| 改了 `description`         | ⚠ 最高危：触发条件变了，可能从此不再被调用。会列出删掉和新增的词，标出语言/语气类规则 |
-| 改了 `name` / 目录移动     | `/旧名字` 入口失效，会告诉你新入口                                                    |
-| 仓库删了 / 技能删了        | 本地副本已无人维护（只有明确的 404 才算删除，网络失败只报"无法检查"）                 |
-| `scripts/` 新增可执行文件  | 需要人来审代码                                                                        |
-| description 变长或超过上限 | 会被截断，或者每轮都多占上下文                                                        |
-| 正文变长                   | 每次调用多占多少 token（正文按需加载，不会挤掉别的技能）                              |
-| 新增平台专用写法           | 比如 PowerShell cmdlet、`brew`、`/usr/bin`，在你的系统上可能跑不起来                  |
+**Skills: upstream (git, any hosting platform)**
 
-**插件（dsh）**：profile 里装的插件是否与当前 dsh 版本兼容（`engines.dsh` / peerDependencies）、是否靠版本豁免在跑、npm 上有没有可升级的新版本、是否被作者弃用。
+| Upstream change                           | Impact                                                                                                                                                       |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `description` changed                     | ⚠ Highest risk: the trigger conditions changed and the skill may never be invoked again. It lists the words removed and added, and flags language/tone rules |
+| `name` changed / directory moved          | The `/old-name` entry point stops working; it tells you the new one                                                                                          |
+| Repo deleted / skill deleted              | Your local copy is now unmaintained (only an explicit 404 counts as deleted; network failures report "couldn't check")                                       |
+| New executable in `scripts/`              | A human needs to review the code                                                                                                                             |
+| description grew longer or over the limit | It gets truncated, or takes up more context on every turn                                                                                                    |
+| Body grew                                 | How many extra tokens each invocation takes (the body loads on demand, so it doesn't crowd out other skills)                                                 |
+| New platform-specific syntax              | PowerShell cmdlets, `brew`, `/usr/bin`, for example — it may not run on your system                                                                          |
 
-**结论行是故意不对称的**：`插件 2 个可一键升级；技能 3 个需你逐个确认`。插件是 npm 包，有版本号、能回滚；技能是提示词，覆盖了就没了，改了行为你也不知道，所以必须由人来看。
+**Plugins (dsh)**: whether the plugins installed in a profile are compatible with the current dsh version (`engines.dsh` / peerDependencies), whether they run on a version exemption, whether npm has a newer release, and whether the author has deprecated them.
 
-## 归因：`why`
+**The summary line is deliberately asymmetric**: `插件 2 个可一键升级；技能 3 个需你逐个确认` ("2 plugins can be upgraded in one click; 3 skills need you to review them one by one"). Plugins are npm packages with version numbers and rollbacks; skills are prompts — overwrite one and the old version is gone, and if its behavior changed you wouldn't know. So a human has to look.
 
-工具第一次运行就开始记录（`~/.skill-healthcheck/journal.jsonl`）：装了什么、改了什么、删了什么，每个版本的 `SKILL.md` 全文都存一份。`why` 用这些记录，再加上 dsh 自己的会话日志（里面有模型每次看到的技能目录，按时间排好），把可疑项排出来：
+## Attribution: `why`
 
-- **症状词典**：把"不用中文了"映射到语言类规则（`respond in English`、`professional tone`、`默认使用英文`…）
-- **时间**：离现象起点越近的变更越可疑；现象之后才发生的变更降权
-- **行为变点**：从会话日志算出助手回复的中文占比、技能调用次数，找出变化开始的那一天
+The tool starts journaling from its very first run (`~/.skill-healthcheck/journal.jsonl`): what was installed, what changed, what was deleted, with the full text of every version of every `SKILL.md`. `why` combines that journal with dsh's own session logs (which contain the skill catalog the model saw each time, in order) to rank the suspects:
 
-全部是确定性代码，不调用 LLM，结果稳定、可测试。
+- **Symptom lexicon**: maps "it stopped answering in Chinese" to language rules (`respond in English`, `professional tone`, `默认使用英文`, …)
+- **Time**: changes closer to when the symptom started are more suspicious; changes that happened after it are down-weighted
+- **Behavior change point**: computes the share of Chinese replies and the skill invocation counts from session logs to find the day the change began
 
-## 在真实数据上验证过
+All of it is deterministic code with no LLM calls, so results are stable and testable.
 
-我们从 15 个公开技能仓库（anthropics/skills、obra/superpowers、vercel-labs/agent-skills、deepseek-ai/deepseek-harness 等）收集了 74 条真实的 `SKILL.md` 变更，逐条用规则跑了一遍：
+## Validated on real data
 
-| 变更类型         | 报出 / 实际 |
-| ---------------- | ----------: |
-| description 被改 |     44 / 44 |
-| name 被改        |     18 / 18 |
-| 目录移动         |     20 / 20 |
-| 新增脚本         |     13 / 13 |
+We collected 74 real `SKILL.md` changes from 15 public skill repositories (anthropics/skills, obra/superpowers, vercel-labs/agent-skills, deepseek-ai/deepseek-harness, among others) and ran the rules over every one of them:
 
-在这批数据里，有 37 次上游改动删掉了 description 里原有的词，16 次改了 name，3 次改完之后的新版本会被 dsh 直接丢弃。数据集、复现方法和规则调整见 [research/EVAL.md](research/EVAL.md)。
+| Change type         | Reported / actual |
+| ------------------- | ----------------: |
+| description changed |           44 / 44 |
+| name changed        |           18 / 18 |
+| directory moved     |           20 / 20 |
+| scripts added       |           13 / 13 |
 
-## 数据与隐私
+In this dataset, 37 upstream changes removed words that had been in the description, 16 renamed the skill, and 3 produced a new version that dsh drops outright. The dataset, reproduction steps, and rule tuning are in [research/EVAL.md](research/EVAL.md).
 
-- 只读你的技能目录、dsh profile 和会话日志；除了 `~/.skill-healthcheck/` 不写任何文件。
-- 会话日志只在本地读，只缓存派生数据（技能目录、调用次数、每天的中文占比），不保存对话原文。
-- 上游检查在 `~/.skill-healthcheck/cache/` 的独立裸仓库里进行，不会 fetch 或修改你自己的技能仓库。
-- 联网只做三件事：`git fetch` 技能上游、GitHub API 确认仓库是否存在、`npm view` 查插件版本。`--offline` 全部关闭。
+## Data and privacy
 
-## 平台支持
+- Reads your skill directories, dsh profiles, and session logs; writes nothing outside `~/.skill-healthcheck/`.
+- Session logs are read locally only, and only derived data is cached (skill catalog, invocation counts, daily share of Chinese replies). Conversation text is never stored.
+- Upstream checks run in separate bare repos under `~/.skill-healthcheck/cache/`; it never fetches into or modifies your own skill repos.
+- `metadata.source` in a skill's frontmatter is written by a third party, so it's treated as untrusted: only https/ssh/git/file URLs and absolute paths are accepted, option injection such as `--upload-pack=…` and transports such as `ext::` are refused, and git never prompts for credentials.
+- Network access does exactly three things: `git fetch` skill upstreams, ask the GitHub API whether a repo still exists, and `npm view` for plugin versions. `--offline` turns all of it off.
 
-| 平台                                       | 支持程度                                                                         |
-| ------------------------------------------ | -------------------------------------------------------------------------------- |
-| DeepSeek Harness（dsh）                    | 完整：照搬 dsh 的扫描顺序和解析规则、会话日志回填、插件和宿主检查                |
-| 通用 Agent Skills（Claude Code、Codex 等） | 扫描 `.agents/skills`、`.claude/skills`、`~/.codex/skills`，做本地检查和上游检查 |
+## Platform support
 
-检测到 `~/.dsh/profiles` 时自动进入 dsh 模式，也可以用 `--platform` 指定。
+| Platform                                        | Level of support                                                                                      |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| DeepSeek Harness (dsh)                          | Full: mirrors dsh's scan order and parsing rules, backfills session logs, checks plugins and the host |
+| Generic Agent Skills (Claude Code, Codex, etc.) | Scans `.agents/skills`, `.claude/skills`, `~/.codex/skills` and runs local plus upstream checks       |
 
-## 技能的来源怎么确定
+It switches to dsh mode automatically when `~/.dsh/profiles` is detected; you can also set it with `--platform`.
 
-dsh 本身不记录技能是从哪装的，所以按这个顺序找，找不到就如实说"来源未知"，不猜：
+## How a skill's source is determined
 
-1. `skill-healthcheck adopt` 登记过的来源
-2. frontmatter 里的 `metadata.source`
-3. 技能所在目录是一个 git checkout → 用它的 `origin`
+dsh itself doesn't record where a skill was installed from, so it tries these in order, and says "source unknown" instead of guessing:
 
-## 开发
+1. A source registered with `skill-healthcheck adopt`
+2. `metadata.source` in the frontmatter
+3. The skill directory is a git checkout → use its `origin`
+
+## Development
 
 ```bash
 npm install
-npm test        # vitest：解析规则、发现规则、记录器、影响规则、上游（本地裸仓库）、归因、词典
-npm run demo    # 15 秒演示，全部在 demo/.sandbox 里进行
-node scripts/corpus-eval.mjs   # 在 74 条真实变更上跑影响规则（需要先 build，会联网取文件）
+npm test        # vitest: parsing, discovery, journal, impact rules, upstream (local bare repos), attribution, lexicon
+npm run demo    # 15-second demo, runs entirely inside demo/.sandbox
+node scripts/corpus-eval.mjs   # run the impact rules over 74 real changes (build first; fetches files from GitHub)
 ```
 
-## 路线图
+## Roadmap
 
-- [x] 记录器、本地静默失效检查、会话日志回填
-- [x] 上游存活检查与变更影响评估
-- [x] `why` 归因（最小版本）
-- [x] 插件兼容性与可升级检查（dsh）
-- [ ] dsh 插件外壳 `dsh-skill-healthcheck`：宿主启动时记录、监听技能变化、提供 `/skill-healthcheck`
-- [ ] 可选 `--explain`：用 LLM 把 diff 翻成一句人话（默认关闭）
-- [ ] 英文输出（`--lang en`）
+- [x] Journal, local silent-failure checks, session-log backfill
+- [x] Upstream liveness checks and change-impact assessment
+- [x] `why` attribution (minimal version)
+- [x] Plugin compatibility and upgrade checks (dsh)
+- [ ] dsh plugin shell `dsh-skill-healthcheck`: record on host startup, watch skill changes, expose `/skill-healthcheck`
+- [ ] Optional `--explain`: use an LLM to turn the diff into one plain sentence (off by default)
+- [ ] English output (`--lang en`)
 
 ## License
 
