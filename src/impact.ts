@@ -144,7 +144,9 @@ export function wordDiff(before: string, after: string): { removed: string[]; ad
   // "discovers" -> "discover" is a rewording, not a lost trigger.
   const bStems = new Set([...b].map(stem))
   const aStems = new Set([...a].map(stem))
-  const rank = (list: string[], source: string) => list.sort((x, y) => weight(y) - weight(x)).slice(0, 5).map((w) => originalCase(w, source))
+  // One word per stem: "prompt" and "prompts" both gone is one lost trigger, not two.
+  const onePerStem = (list: string[]) => [...new Map(list.map((w) => [stem(w), w] as const)).values()]
+  const rank = (list: string[], source: string) => onePerStem(list).sort((x, y) => weight(y) - weight(x)).slice(0, 5).map((w) => originalCase(w, source))
   return { removed: rank([...b].filter((w) => !aStems.has(stem(w))), before), added: rank([...a].filter((w) => !bStems.has(stem(w))), after) }
 }
 
@@ -160,12 +162,18 @@ function originalCase(word: string, source: string): string {
  * as lost triggers. Exported because `why` matches symptom words the same way.
  */
 export function stem(w: string): string {
-  if (!/^[a-z]+$/.test(w) || w.length < 4) return w
-  if (w.endsWith('ies')) return `${w.slice(0, -3)}y`
-  if (/(ches|shes|sses|xes|zes)$/.test(w)) return w.slice(0, -2)
-  if (w.endsWith('ing') || w.endsWith('ed')) return w.slice(0, -3).replace(/([bcdfgklmnprstvz])\1$/, '$1')
-  if (w.endsWith('s') && !w.endsWith('ss')) return w.slice(0, -1)
-  return w
+  if (!/^[a-z]+$/.test(w)) return w
+  let s = w
+  if (w.length >= 4) {
+    if (/(ies|ied)$/.test(w)) s = `${w.slice(0, -3)}y`
+    else if (/(ches|shes|sses|xes|zes)$/.test(w)) s = w.slice(0, -2)
+    // "stopped" -> "stop", but "calling" -> "call" and "processing" -> "process".
+    else if (w.endsWith('ing')) s = w.slice(0, -3).replace(/([bdgmnprt])\1$/, '$1')
+    else if (w.endsWith('ed')) s = w.slice(0, -2).replace(/([bdgmnprt])\1$/, '$1')
+    else if (w.endsWith('s') && !w.endsWith('ss')) s = w.slice(0, -1)
+  }
+  // "change" / "changed" / "changing" all end up as "chang".
+  return s.length > 2 && s.endsWith('e') && !s.endsWith('ee') ? s.slice(0, -1) : s
 }
 
 // Language names are usually the trigger itself ("Chinese writing assistant"); losing one

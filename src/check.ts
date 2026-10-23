@@ -1,10 +1,11 @@
-import { localFindings, usageFindings } from './checks.js'
+import { catalogText, localFindings, usageFindings } from './checks.js'
 import { buildInventory } from './discover.js'
+import type { ParseResult, ParsedSkill } from './frontmatter.js'
 import { t } from './i18n.js'
 import { Explainer, resolveProvider, type Provider } from './explain.js'
 import { assessImpact, wordDiff } from './impact.js'
 import { record, Store, type JournalEvent } from './journal.js'
-import { detectPlatform, type PlatformOptions } from './platforms.js'
+import { catalogLimit, detectPlatform, type PlatformOptions } from './platforms.js'
 import { checkPlugins, pluginFindings, type PluginReport } from './plugins.js'
 import { catalogTimeline, loadSessions, type CatalogTimeline, type SessionSummary } from './sessions.js'
 import type { Finding, InstalledSkill, Inventory, PlatformInfo, Severity } from './types.js'
@@ -173,12 +174,16 @@ function upstreamFindings(skill: InstalledSkill, upstream: UpstreamResult, platf
         },
       ]
     case 'changed': {
+      // Compare what the model is shown: Claude Code lists when_to_use after the description.
+      const agent = skill.root.agent
+      const listed = (s: ParsedSkill): ParsedSkill => ({ ...s, description: catalogText(s, agent) })
+      const after: ParseResult = upstream.parse.ok ? { ok: true, skill: listed(upstream.parse.skill) } : upstream.parse
       const impact = assessImpact({
         name,
-        before: skill.skill,
-        after: upstream.parse,
+        before: listed(skill.skill),
+        after,
         scripts: upstream.scripts,
-        catalogMaxLength: platform.catalogMaxLength,
+        catalogMaxLength: catalogLimit(platform, agent),
         movedTo: upstream.movedTo,
       })
       if (impact.length === 0) {

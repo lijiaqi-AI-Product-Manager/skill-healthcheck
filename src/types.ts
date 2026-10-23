@@ -8,6 +8,8 @@ export interface SkillRoot {
   /** Lower rank wins a name collision (dsh semantics). */
   rank: number
   skipSystem?: boolean
+  /** Folder names (case-insensitive) that are not skills here, e.g. `synced`, scanned as a root of its own. */
+  skipDirs?: string[]
   /** Shipped with the host; never checked against an upstream. */
   bundled?: boolean
   /** Which agent reads this root (generic mode). Name collisions only matter within one agent. */
@@ -35,7 +37,7 @@ export interface PlatformInfo {
   projectRoot: string
   roots: SkillRoot[]
   unscannedRoots: UnscannedRoot[]
-  /** Catalog description limit; undefined when the platform doesn't truncate (or we don't know). */
+  /** Catalog description limit (dsh); generic mode takes it per agent from `catalogLimit`. */
   catalogMaxLength?: number
   host: HostStatus
   dshHome?: string
@@ -69,6 +71,8 @@ export interface NestedSkillDir {
   dir: string
   /** SKILL.md files found below the top level that dsh will never discover. */
   found: string[]
+  /** Set for agents that walk the tree (Codex): how many levels down they look. */
+  depthLimit?: number
 }
 
 export interface Inventory {

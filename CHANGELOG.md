@@ -1,5 +1,46 @@
 # Changelog
 
+## 1.1.0
+
+Claude Code and Codex now get their own rules. Until 1.0.2, generic mode read their skills
+with dsh's parser, so a Claude Code skill named `My_Skill` or one without frontmatter was
+reported as "silently dropped" (exit 1) although Claude Code loads it, and Codex skills a few
+folders deep were reported as nested although Codex walks the tree.
+
+**Fixed**
+- **Claude Code**, from its documented rules: any name without refused characters is valid;
+  `name` falls back to the folder and `description` to the body's first line; a frontmatter
+  that doesn't parse loads with no fields instead of being dropped; booleans accept
+  yes/no/on/off/1/0; personal skills win over project skills (the reverse was reported);
+  project skills come from `.claude/skills` in every folder from the start directory up to
+  the repo root; `~/.claude/skills/synced` (claude.ai sync) is read and `.trash` is not;
+  loose `.md` files in a skills folder are not skills.
+- **Codex**, mirroring codex-rs: skills are found up to six folders deep with hidden folders
+  skipped; `name` falls back to the folder and is capped at 64 characters; `description` is
+  required; `key: prose: with colons` is repaired the way Codex does; same-name skills are
+  reported as "both listed", not as one shadowing the other.
+- Catalog limits per agent: Claude Code 1,536 characters (description plus `when_to_use`),
+  Codex 1,024. Only dsh's 500 was known before, so truncation went unreported elsewhere.
+- Upstream comparison reads the new version with the skill's own agent rules and folder
+  name, so a name-less Claude Code skill is not reported as renamed when the upstream folder
+  differs from yours.
+- Word stems: `change`/`changed`/`changing` and `use`/`used` now compare equal, so rewording
+  is not reported as a removed trigger word.
+
+**New finding codes**
+- `frontmatter-ignored` (critical, Claude Code): broken YAML, so the model never sees the
+  description; only `/name` works.
+- `no-description` (medium, Claude Code): no description, so the body's first line is used.
+
+**Changed**
+- The skills line counts a skill with no known upstream as working, and says how many were
+  not checked upstream: a skill you wrote yourself has no upstream to check. The footer says
+  `adopt --repo` is for skills installed from a git repo.
+- `actions/checkout` and `actions/setup-node` v7; `@anthropic-ai/sdk` 0.136. Dependabot no
+  longer proposes major bumps of `@types/node` (it must match Node 22) or TypeScript.
+- `package-lock.json` matches `package.json` again (the 1.0.2 lock still listed the SDK as a
+  regular dependency).
+
 ## 1.0.2
 
 Correctness release, driven by six independent external reviews of 1.0.1. Most of these were

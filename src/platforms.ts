@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { parse } from 'yaml'
 import { agentsHome, dshHome, userHome } from './env.js'
 import { t } from './i18n.js'
@@ -80,14 +80,19 @@ function genericPlatform(cwd: string): PlatformInfo {
   const home = userHome()
   const codexHome = process.env.CODEX_HOME ? resolve(process.env.CODEX_HOME) : join(home, '.codex')
   // Each agent reads its own roots, so a skill installed for both is not a conflict.
-  // Claude Code: project .claude/skills, ~/.claude/skills.
-  // Codex (codex-rs ext/skills host_roots.rs): project .codex/skills and .agents/skills,
-  // ~/.agents/skills, $CODEX_HOME/skills (its .system folder is Codex's own cache).
+  // Claude Code (code.claude.com/docs/en/skills): personal wins over project; project skills
+  // come from .claude/skills in the start directory and every parent up to the repo root;
+  // ~/.claude/skills/synced holds skills downloaded from claude.ai.
+  // Codex (codex-rs ext/skills host_roots.rs): .agents/skills in every directory from the
+  // project root to cwd, project .codex/skills, ~/.agents/skills, $CODEX_HOME/skills (its
+  // .system folder is Codex's own cache). Codex lists same-name skills side by side.
+  const between = dirsFromCwdToRoot(cwd, projectRoot)
   const roots: SkillRoot[] = [
-    { path: join(projectRoot, '.claude', 'skills'), source: 'project-claude', rank: 100, agent: 'claude-code' },
-    { path: join(home, '.claude', 'skills'), source: 'user-claude', rank: 400, agent: 'claude-code' },
-    { path: join(projectRoot, '.codex', 'skills'), source: 'project-codex', rank: 100, agent: 'codex' },
-    { path: join(projectRoot, '.agents', 'skills'), source: 'project-agents', rank: 110, agent: 'codex' },
+    { path: join(home, '.claude', 'skills'), source: 'user-claude', rank: 100, agent: 'claude-code', skipDirs: ['synced'] },
+    { path: join(home, '.claude', 'skills', 'synced'), source: 'claude-synced', rank: 150, agent: 'claude-code' },
+    ...between.map((dir, i) => ({ path: join(dir, '.claude', 'skills'), source: 'project-claude', rank: 200 + i, agent: 'claude-code' })),
+    ...between.map((dir, i) => ({ path: join(dir, '.agents', 'skills'), source: 'project-agents', rank: 100 + i, agent: 'codex' })),
+    { path: join(projectRoot, '.codex', 'skills'), source: 'project-codex', rank: 150, agent: 'codex' },
     { path: join(agentsHome(), 'skills'), source: 'user-agents', rank: 400, agent: 'codex' },
     { path: join(codexHome, 'skills'), source: 'user-codex', rank: 410, agent: 'codex', skipSystem: true },
   ]
@@ -104,6 +109,30 @@ function genericPlatform(cwd: string): PlatformInfo {
       { dir: join(process.env.CODEX_HOME ? resolve(process.env.CODEX_HOME) : join(home, '.codex'), 'sessions'), format: 'codex' },
     ],
   }
+}
+
+/** cwd first, then each parent up to and including the project root. */
+function dirsFromCwdToRoot(cwd: string, projectRoot: string): string[] {
+  const out: string[] = []
+  let current = resolve(cwd)
+  const rel = relative(projectRoot, current)
+  if (rel.startsWith('..') || isAbsolute(rel)) return [projectRoot]
+  while (true) {
+    out.push(current)
+    if (current === projectRoot) return out
+    const parent = dirname(current)
+    if (parent === current) return out
+    current = parent
+  }
+}
+
+// Catalog description caps: dsh-tool-skill 500; Claude Code 1,536 for description +
+// when_to_use (skillListingMaxDescChars); codex-rs render.rs MAX_CATALOG_SKILL_DESCRIPTION_CHARS 1,024.
+const AGENT_CATALOG_MAX: Record<string, number> = { 'claude-code': 1536, codex: 1024 }
+
+/** The catalog limit that applies to a skill in this root. */
+export function catalogLimit(platform: Pick<PlatformInfo, 'catalogMaxLength'>, agent: string | undefined): number | undefined {
+  return agent ? AGENT_CATALOG_MAX[agent] : platform.catalogMaxLength
 }
 
 function pickProfile(home: string): string | undefined {

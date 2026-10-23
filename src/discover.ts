@@ -1,12 +1,21 @@
 import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs'
-import { join, relative } from 'node:path'
-import { parseSkillText } from './frontmatter.js'
+import { basename, join, relative } from 'node:path'
+import { dialectOf, parseSkillText } from './frontmatter.js'
+import { t } from './i18n.js'
 import type { InstalledSkill, Inventory, NestedSkillDir, PlatformInfo, SkillEntry, SkillRoot } from './types.js'
 
 const NESTED_SEARCH_DEPTH = 3
+/** codex-rs ext/skills loader: MAX_SCAN_DEPTH (entries below the root) and MAX_SKILLS_DIRS_PER_ROOT. */
+export const CODEX_SCAN_DEPTH = 6
+const CODEX_MAX_DIRS = 2000
 
-/** List a root's top-level entries the way dsh-skill-filesystem does (depth 1, sorted). */
+/**
+ * List a root's skills the way its agent does. dsh and Claude Code read `<root>/<name>/SKILL.md`
+ * (dsh also `<root>/<name>.md`); Codex walks the tree, skipping hidden folders.
+ */
 export function scanRoot(root: SkillRoot): { entries: SkillEntry[]; nested: NestedSkillDir[] } {
+  const dialect = dialectOf(root.agent)
+  if (dialect === 'codex') return scanCodexRoot(root)
   const entries: SkillEntry[] = []
   const nested: NestedSkillDir[] = []
   let names: string[]
@@ -15,8 +24,12 @@ export function scanRoot(root: SkillRoot): { entries: SkillEntry[]; nested: Nest
   } catch {
     return { entries, nested }
   }
+  const skip = new Set((root.skipDirs ?? []).map((d) => d.toLowerCase()))
   for (const name of names.sort((a, b) => a.localeCompare(b))) {
     if (root.skipSystem && name === '.system') continue
+    if (skip.has(name.toLowerCase())) continue
+    // Claude Code keeps its own bookkeeping in dot folders (~/.claude/skills/.trash).
+    if (dialect === 'claude-code' && name.startsWith('.')) continue
     const full = join(root.path, name)
     const kind = entryKind(full)
     if (kind === 'directory') {
@@ -29,13 +42,65 @@ export function scanRoot(root: SkillRoot): { entries: SkillEntry[]; nested: Nest
         }
         continue
       }
-      entries.push({ root, entryName: name, file, dir: full, kind: 'bundle', raw, parse: parseSkillText(raw) })
-    } else if (kind === 'file' && name.endsWith('.md')) {
+      // Claude Code reserves `synced` for skills it downloads from claude.ai and skips any other.
+      const parse =
+        dialect === 'claude-code' && name.toLowerCase() === 'synced'
+          ? ({ ok: false, code: 'reserved-folder', reason: t('local.reservedFolder', name) } as const)
+          : parseSkillText(raw, { dialect, dirName: name })
+      entries.push({ root, entryName: name, file, dir: full, kind: 'bundle', raw, parse })
+    } else if (dialect === 'dsh' && kind === 'file' && name.endsWith('.md')) {
       const raw = readText(full)
       if (raw === undefined) continue
       entries.push({ root, entryName: name, file: full, dir: root.path, kind: 'flat', raw, parse: parseSkillText(raw) })
     }
   }
+  return { entries, nested }
+}
+
+/** codex-rs `discover_skills` in recursive mode: every SKILL.md up to six levels down, hidden folders pruned. */
+function scanCodexRoot(root: SkillRoot): { entries: SkillEntry[]; nested: NestedSkillDir[] } {
+  const entries: SkillEntry[] = []
+  const tooDeep = new Map<string, string[]>()
+  const seen = new Set<string>()
+  let dirs = 0
+  const walk = (dir: string, depth: number) => {
+    let real: string
+    try {
+      real = realpathSync.native(dir)
+    } catch {
+      return
+    }
+    if (seen.has(real) || dirs++ >= CODEX_MAX_DIRS) return
+    seen.add(real)
+    let names: string[]
+    try {
+      names = readdirSync(dir)
+    } catch {
+      return
+    }
+    for (const name of names.sort((a, b) => a.localeCompare(b))) {
+      if (name.startsWith('.')) continue
+      const full = join(dir, name)
+      const kind = entryKind(full)
+      if (kind === 'file' && name === 'SKILL.md') {
+        if (depth + 1 <= CODEX_SCAN_DEPTH) {
+          const raw = readText(full)
+          if (raw === undefined) continue
+          const entryName = relative(root.path, dir).replaceAll('\\', '/') || basename(dir)
+          entries.push({ root, entryName, file: full, dir, kind: 'bundle', raw, parse: parseSkillText(raw, { dialect: 'codex', dirName: basename(dir) }) })
+        } else {
+          const top = join(root.path, relative(root.path, dir).split(/[\\/]/)[0] ?? '')
+          const list = tooDeep.get(top) ?? []
+          list.push(relative(top, full).replaceAll('\\', '/'))
+          tooDeep.set(top, list)
+        }
+      } else if (kind === 'directory' && name !== 'node_modules' && depth + 1 < CODEX_SCAN_DEPTH + NESTED_SEARCH_DEPTH) {
+        walk(full, depth + 1)
+      }
+    }
+  }
+  walk(root.path, 0)
+  const nested = [...tooDeep].map(([dir, found]) => ({ root, dir, found: found.sort(), depthLimit: CODEX_SCAN_DEPTH }))
   return { entries, nested }
 }
 

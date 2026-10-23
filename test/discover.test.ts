@@ -68,14 +68,23 @@ describe('buildInventory on dsh roots', () => {
     expect(inv.active.map((a) => a.root.agent)).toEqual(['claude-code', 'codex'])
   })
 
-  it('reports a same-name conflict within one agent without claiming which copy wins', () => {
+  it('lets the personal Claude Code skill win over the project copy, as documented', () => {
     const s = sandbox('generic')
     write(join(s.project, '.claude', 'skills', 'pdf', 'SKILL.md'), skillMd({ name: 'pdf', description: 'project copy' }))
     write(join(s.home, '.claude', 'skills', 'pdf', 'SKILL.md'), skillMd({ name: 'pdf', description: 'user copy' }))
     const inv = buildInventory(detectPlatform({ cwd: s.project }))
+    expect(inv.active.map((a) => a.skill.description)).toEqual(['user copy'])
     const f = localFindings(inv).find((x) => x.code === 'shadowed')!
     expect(f.severity).toBe('high')
-    expect(f.message).toContain('claude-code 只会加载其中一份')
+    expect(f.message).toContain('被 user-claude 里的同名技能遮蔽')
+  })
+
+  it('says Codex lists both same-name skills instead of picking one', () => {
+    const s = sandbox('generic')
+    write(join(s.project, '.agents', 'skills', 'pdf', 'SKILL.md'), skillMd({ name: 'pdf', description: 'project copy' }))
+    write(join(s.home, '.agents', 'skills', 'pdf', 'SKILL.md'), skillMd({ name: 'pdf', description: 'user copy' }))
+    const f = localFindings(buildInventory(detectPlatform({ cwd: s.project }))).find((x) => x.code === 'shadowed')!
+    expect(f.message).toContain('Codex 会把两份都列给模型')
   })
 
   it("skips Codex's own .system cache under $CODEX_HOME/skills", () => {

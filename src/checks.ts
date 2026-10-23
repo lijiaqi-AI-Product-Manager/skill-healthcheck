@@ -1,8 +1,9 @@
 // Local silent failures: things that make a skill invisible to the model without any
 // error, detectable offline from disk and session logs.
 import { relative } from 'node:path'
-import { catalogDescription } from './frontmatter.js'
+import { catalogDescription, type ParsedSkill } from './frontmatter.js'
 import { t } from './i18n.js'
+import { catalogLimit } from './platforms.js'
 import { localDay, QUIET_SESSIONS, usageStats, type CatalogTimeline, type SessionSummary } from './sessions.js'
 import type { Finding, Inventory } from './types.js'
 
@@ -10,23 +11,22 @@ const DAY = 86_400_000
 
 export function localFindings(inv: Inventory): Finding[] {
   const out: Finding[] = []
-  const who = inv.platform.id === 'dsh' ? t('local.dropper.dsh') : t('local.dropper.agent')
   for (const entry of inv.dropped) {
     if (!entry.parse.ok) {
       const name = entry.parse.rawName ?? entry.entryName.replace(/\.md$/, '')
       // A flat README.md without frontmatter is noise, not a broken skill.
       const severity = entry.kind === 'flat' && entry.parse.code === 'missing-frontmatter' ? 'info' : 'critical'
-      out.push({ code: 'dropped', severity, subject: name, message: t('local.dropped', who, entry.parse.reason), detail: [entry.file], area: 'local' })
+      out.push({ code: 'dropped', severity, subject: name, message: t('local.dropped', agentLabel(entry.root.agent), entry.parse.reason), detail: [entry.file], area: 'local' })
     }
   }
   for (const s of inv.shadowed) {
     const winner = s.shadowedBy!
     const same = winner.raw === s.raw
-    // dsh's precedence is documented and mirrored exactly; other agents' isn't, so only say "conflict".
+    // dsh and Claude Code document which copy wins; Codex lists both to the model.
     const message = same
       ? t('local.shadowedSame', winner.root.source)
-      : s.root.agent
-        ? t('local.conflict', winner.root.source, s.root.agent)
+      : s.root.agent === 'codex'
+        ? t('local.listedTwice', winner.root.source, agentLabel(s.root.agent))
         : t('local.shadowed', winner.root.source)
     out.push({
       code: 'shadowed',
@@ -42,7 +42,7 @@ export function localFindings(inv: Inventory): Finding[] {
       code: 'nested',
       severity: 'high',
       subject: relative(n.root.path, n.dir) || n.dir,
-      message: t('local.nested', n.found.length),
+      message: n.depthLimit ? t('local.nestedDeep', n.found.length, n.depthLimit) : t('local.nested', n.found.length),
       detail: n.found.slice(0, 5).map((f) => `${n.dir}/${f}`.replaceAll('\\', '/')),
       area: 'local',
     })
@@ -57,10 +57,18 @@ export function localFindings(inv: Inventory): Finding[] {
       area: 'local',
     })
   }
-  const max = inv.platform.catalogMaxLength
   for (const s of inv.active) {
-    if (max && s.skill.description.replaceAll(/\s+/g, ' ').trim().length > max) {
-      const shown = catalogDescription(s.skill.description, max)
+    for (const note of s.skill.notes ?? []) {
+      if (note.code === 'frontmatter-ignored') {
+        out.push({ code: 'frontmatter-ignored', severity: 'critical', subject: s.skill.name, message: t('local.frontmatterIgnored', note.reason), detail: [s.file], area: 'local' })
+      } else {
+        out.push({ code: 'no-description', severity: 'medium', subject: s.skill.name, message: t('local.descriptionFromBody', s.skill.description.slice(0, 60)), detail: [s.file], area: 'local' })
+      }
+    }
+    const max = catalogLimit(inv.platform, s.root.agent)
+    const listed = catalogText(s.skill, s.root.agent)
+    if (max && listed.replaceAll(/\s+/g, ' ').trim().length > max) {
+      const shown = catalogDescription(listed, max)
       out.push({
         code: 'description-truncated',
         severity: 'medium',
@@ -75,6 +83,16 @@ export function localFindings(inv: Inventory): Finding[] {
     }
   }
   return out
+}
+
+/** Display name of the agent that reads a root; dsh roots carry no agent. */
+export function agentLabel(agent: string | undefined): string {
+  return agent === 'claude-code' ? 'Claude Code' : agent === 'codex' ? 'Codex' : 'dsh'
+}
+
+/** What the catalog shows for a skill: Claude Code appends `when_to_use` to the description. */
+export function catalogText(skill: Pick<ParsedSkill, 'description' | 'whenToUse'>, agent: string | undefined): string {
+  return agent === 'claude-code' && skill.whenToUse ? `${skill.description} ${skill.whenToUse}` : skill.description
 }
 
 /**

@@ -5,6 +5,14 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # Types must describe the oldest runtime we support (engines: node >=22.19), or code
+      # that only exists in newer Node compiles fine and crashes on 22.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+      # A compiler major is a migration, not a weekly bump.
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
     groups:
       dev-dependencies:
         dependency-type: development

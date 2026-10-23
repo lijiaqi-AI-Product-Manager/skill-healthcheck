@@ -11,9 +11,7 @@
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="欢迎 PR">
 </p>
 
-<p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&pause=1200&color=3FB950&center=true&vCenter=true&width=720&lines=Find+skills+that+silently+stopped+working;Know+when+your+agent%27s+behavior+changed" alt="找出悄悄失效的 skill">
-</p>
+<p align="center"><b>找出悄悄失效的 agent 技能，以及 agent 的行为是从哪天开始变的。</b><br>Claude Code · Codex · DeepSeek Harness</p>
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/lijiaqimun-coder/skill-healthcheck/main/docs/demo.png" alt="skill-healthcheck: one checkup flags a skill whose upstream description changed" width="900">
@@ -64,7 +62,13 @@ why "为什么它现在不用中文回答我了" → 回复语言变了（不用
 
 ## 安装
 
-需要 Node.js 22.19+ 和 git。
+需要 Node.js 22.19+ 和 git。不安装直接试：
+
+```bash
+npx skill-healthcheck
+```
+
+或者安装：
 
 ```bash
 npm install -g skill-healthcheck
@@ -76,7 +80,7 @@ npm install -g skill-healthcheck
 git clone https://github.com/lijiaqimun-coder/skill-healthcheck && cd skill-healthcheck && npm install && npm run build && npm link
 ```
 
-国内用 npmmirror 镜像通常更快：`npm install -g skill-healthcheck --registry=https://registry.npmmirror.com`
+国内用 npmmirror 镜像通常更快：在上面任一命令后面加 `--registry=https://registry.npmmirror.com`。
 
 
 ## 用法
@@ -114,9 +118,12 @@ dsh plugin --profile desktop add dsh-skill-healthcheck
 
 没有 dsh 时，`skill-healthcheck` 以通用模式运行：
 
-- **只看各个 agent 实际会加载的技能目录**。Claude Code 是 `.claude/skills`、`~/.claude/skills`；Codex 是 `.codex/skills`、`.agents/skills`、`~/.agents/skills`、`$CODEX_HOME/skills`。
+- **Claude Code：按它的官方文档的规则检查**。扫描 `~/.claude/skills`、`~/.claude/skills/synced`，以及从启动目录一直到仓库根目录每一层的 `.claude/skills`。name 不要求 kebab-case；没写 description 时用正文第一行代替；frontmatter 写坏了不会被丢弃，而是忽略全部字段加载，模型因此看不到 description，这种情况会报出来。个人目录的技能优先于项目目录。
+- **Codex：按它的源码的规则检查**。扫描从仓库根到启动目录的 `.agents/skills`、`.codex/skills`、`~/.agents/skills`、`$CODEX_HOME/skills`，最深找 6 层。description 必填；同名技能会被同时列给模型。
 - **从它们的会话日志里回填历史**（`~/.claude/projects`、`~/.codex/sessions`）：模型每次看到的技能目录、每一次技能调用、回复用的语言。所以 `why` 在这两个平台上也能用。
-- **同名冲突只在同一个 agent 内部算**。同一个技能给两个 agent 各装一份，不算冲突；同一个 agent 下有两份同名技能才算。
+- **同名冲突只在同一个 agent 内部算**。同一个技能给两个 agent 各装一份，不算冲突。
+
+Claude Code 插件里的技能（`/插件名:技能名`）由 Claude Code 的插件管理器安装和更新，这里不扫描、不查上游；它们的 description 变化仍会通过会话日志进入 `why`。
 
 想让记录自动持续，可以在 `~/.claude/settings.json` 里加一个钩子，每次 Claude Code 会话开始时记录一次：
 
@@ -152,11 +159,11 @@ Codex 可以用 cron 或 Windows 任务计划程序，每天运行一次 `skill-
 
 | 问题                                                                 | 为什么会静默失效                                                   |
 | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| frontmatter 不合法（name 不是 kebab-case、布尔值写错、用了旧字段名） | dsh 直接丢弃整个技能，只在日志里打一行警告                         |
-| 同名遮蔽                                                             | 项目级 `.dsh/skills` 里的同名技能会盖住你全局装的那个              |
-| 嵌套太深                                                             | 只认 `<根>/<名>/SKILL.md`；把整个技能仓库 clone 进去，一个都不生效 |
+| frontmatter 不合法                                                   | dsh 和 Codex 直接丢弃整个技能；Claude Code 照样加载但没有 description，模型不会选它 |
+| 同名遮蔽                                                             | dsh 里项目级的生效，Claude Code 里个人目录的生效；Codex 两份都列出来，模型可能选错 |
+| 嵌套太深                                                             | dsh 和 Claude Code 只认 `<根>/<名>/SKILL.md`；把整个技能仓库 clone 进去，一个都不生效 |
 | 放错目录                                                             | dsh 不扫描 `~/.claude/skills`、`~/.codex/skills`                   |
-| description 超过 500 字符                                            | 目录里被截断，结尾的触发词模型看不到                               |
+| description 超过目录上限                                             | dsh 截到 500 字符，Codex 1024，Claude Code 1536，结尾的触发词模型看不到 |
 | 曾经常用、某天之后再没调用过                                         | 从会话日志里看到的证据，比任何推断都硬                             |
 
 **技能：上游（git，任何托管平台）**
@@ -177,7 +184,7 @@ Codex 可以用 cron 或 Windows 任务计划程序，每天运行一次 `skill-
 
 ## 归因：`why`
 
-工具第一次运行就开始记录（`~/.skill-healthcheck/journal.jsonl`）：装了什么、改了什么、删了什么，每个版本的 `SKILL.md` 全文都存一份。`why` 用这些记录，再加上 dsh 自己的会话日志（里面有模型每次看到的技能目录，按时间排好），把可疑项排出来：
+工具第一次运行就开始记录（`~/.skill-healthcheck/journal.jsonl`）：装了什么、改了什么、删了什么，每个版本的 `SKILL.md` 全文都存一份。`why` 用这些记录，再加上 agent 自己的会话日志（里面有模型每次看到的技能目录，按时间排好），把可疑项排出来：
 
 - **症状词典**：把"不用中文了"映射到语言类规则（`respond in English`、`professional tone`、`默认使用英文`…）
 - **时间**：离现象起点越近的变更越可疑；现象之后才发生的变更降权
@@ -212,13 +219,13 @@ Codex 可以用 cron 或 Windows 任务计划程序，每天运行一次 `skill-
 | 平台                                       | 支持程度                                                                         |
 | ------------------------------------------ | -------------------------------------------------------------------------------- |
 | DeepSeek Harness（dsh）                    | 完整：照搬 dsh 的扫描顺序和解析规则、会话日志回填、插件和宿主检查                |
-| Claude Code 和 Codex（通用模式） | 按各自的技能目录做本地检查和上游检查，并从两者的会话日志回填历史 |
+| Claude Code 和 Codex（通用模式）           | 按各自的技能目录和解析规则做本地检查和上游检查，并从会话日志回填历史             |
 
 检测到 `~/.dsh/profiles` 时自动进入 dsh 模式，也可以用 `--platform` 指定。
 
 ## 技能的来源怎么确定
 
-dsh 本身不记录技能是从哪装的，所以按这个顺序找，找不到就如实说"来源未知"，不猜：
+各个 agent 都不记录技能是从哪装的，所以按这个顺序找，找不到就如实说"来源未知"，不猜：
 
 1. `skill-healthcheck adopt` 登记过的来源
 2. frontmatter 里的 `metadata.source`

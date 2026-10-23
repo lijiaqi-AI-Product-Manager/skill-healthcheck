@@ -1,14 +1,38 @@
-// Mirrors @deepseek-ai/dsh-skill-filesystem's SKILL.md parsing so that "dropped" here
-// means exactly "dsh silently ignores this file". Keep in sync with dsh 0.2.x.
+// SKILL.md parsing, one dialect per agent, so that "dropped" here means exactly "this agent
+// silently ignores the file":
+// - dsh: mirrors @deepseek-ai/dsh-skill-filesystem 0.2.x.
+// - claude-code: the documented frontmatter rules (code.claude.com/docs/en/skills). Almost
+//   nothing is dropped; a broken frontmatter loads with no fields instead.
+// - codex: mirrors codex-rs/skills/src/parser.rs (name defaults to the folder, 64 chars max,
+//   description required, colon-in-prose repair).
 import { parse } from 'yaml'
 import { t } from './i18n.js'
 
 export const SKILL_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
+export type Dialect = 'dsh' | 'claude-code' | 'codex'
+
+/** The dialect of the agent that reads a root; dsh roots carry no agent. */
+export function dialectOf(agent: string | undefined): Dialect {
+  return agent === 'claude-code' || agent === 'codex' ? agent : 'dsh'
+}
+
+export interface ParseOptions {
+  dialect?: Dialect
+  /** The skill's folder name: Claude Code and Codex use it when `name` is absent. */
+  dirName?: string
+}
+
 export interface InvocationPolicy {
   modelInvocable: boolean
   userInvocable: boolean
 }
+
+/**
+ * Loaded, but not the way the author meant: Claude Code ignored a frontmatter that does not
+ * parse, or fell back to the body's first line for a missing description.
+ */
+export type SkillNote = { code: 'frontmatter-ignored'; reason: string } | { code: 'description-from-body' }
 
 export interface ParsedSkill {
   name: string
@@ -17,6 +41,7 @@ export interface ParsedSkill {
   invocation: InvocationPolicy
   metadata?: Record<string, unknown>
   body: string
+  notes?: SkillNote[]
 }
 
 export type DropCode =
@@ -25,6 +50,7 @@ export type DropCode =
   | 'missing-name-or-description'
   | 'invalid-name'
   | 'invalid-invocation'
+  | 'reserved-folder'
 
 export type ParseResult =
   | { ok: true; skill: ParsedSkill }
@@ -36,9 +62,11 @@ const LEGACY_KEYS: Array<[string, string]> = [
   ['userInvocable', 'user-invocable'],
 ]
 
-export function parseSkillText(input: string): ParseResult {
+export function parseSkillText(input: string, options: ParseOptions = {}): ParseResult {
   // A BOM is what Notepad and PowerShell's Out-File write; it is not part of the document.
   const raw = input.replace(/^\ufeff/, '')
+  if (options.dialect === 'claude-code') return parseClaudeCode(raw, options.dirName ?? '')
+  if (options.dialect === 'codex') return parseCodex(raw, options.dirName ?? '')
   let split: { data: Record<string, unknown>; body: string } | undefined
   try {
     split = splitFrontmatter(raw)
@@ -72,7 +100,187 @@ export function parseSkillText(input: string): ParseResult {
   return { ok: true, skill }
 }
 
-export function splitFrontmatter(raw: string): { data: Record<string, unknown>; body: string } | undefined {
+/** Claude Code: every field is optional, and a frontmatter that doesn't parse is ignored, not fatal. */
+function parseClaudeCode(raw: string, dirName: string): ParseResult {
+  const block = frontmatterBlock(raw)
+  const notes: SkillNote[] = []
+  let data: Record<string, unknown> = {}
+  let body = raw
+  if (block) {
+    body = block.body
+    try {
+      const parsed: unknown = parse(block.yaml)
+      if (isMap(parsed)) data = parsed
+      else if (parsed !== null && parsed !== undefined) notes.push({ code: 'frontmatter-ignored', reason: t('fm.notMapping') })
+    } catch (error) {
+      notes.push({ code: 'frontmatter-ignored', reason: t('fm.yaml', firstLine(error)) })
+    }
+  }
+  const name = stringField(data, 'name') ?? dirName
+  const rawName = typeof data.name === 'string' ? data.name : undefined
+  if (!name || CLAUDE_REFUSED_NAME.test(name) || /^ | $| {2}/.test(name)) {
+    return { ok: false, code: 'invalid-name', reason: t('fm.ccBadName', name), rawName }
+  }
+  if (name === 'anthropic-skills' || name.startsWith('anthropic-skills:')) {
+    return { ok: false, code: 'invalid-name', reason: t('fm.reservedName', name), rawName }
+  }
+  let description = stringField(data, 'description')
+  if (description === undefined) {
+    description = body.split(/\r?\n/).find((line) => line.trim() !== '')?.trim() ?? ''
+    if (!notes.length) notes.push({ code: 'description-from-body' })
+  }
+  const skill: ParsedSkill = {
+    name,
+    description,
+    invocation: {
+      modelInvocable: lenientBoolean(data['disable-model-invocation']) !== true,
+      userInvocable: lenientBoolean(data['user-invocable']) !== false,
+    },
+    body: body.replace(/\r\n/g, '\n').trim(),
+  }
+  const whenToUse = stringField(data, 'when_to_use')
+  if (whenToUse !== undefined) skill.whenToUse = whenToUse
+  if (isMap(data.metadata)) skill.metadata = data.metadata
+  if (notes.length) skill.notes = notes
+  return { ok: true, skill }
+}
+
+/** Control, format (zero-width, bidi), private-use and unassigned characters, blanks other than a plain space, < and >. */
+const CLAUDE_REFUSED_NAME = /[\p{Cc}\p{Cf}\p{Co}\p{Cn}<>]|[^\S ]/u
+
+/** Claude Code reads yes/no/on/off/1/0 in any case; anything else leaves the default. */
+function lenientBoolean(value: unknown): boolean | undefined {
+  if (typeof value === 'boolean') return value
+  if (value === 1 || value === 0) return value === 1
+  if (typeof value !== 'string') return undefined
+  const v = value.toLowerCase()
+  if (['true', 'yes', 'on', '1'].includes(v)) return true
+  if (['false', 'no', 'off', '0'].includes(v)) return false
+  return undefined
+}
+
+const CODEX_MAX_NAME = 64
+
+/** Codex: frontmatter and a description are required; the name falls back to the folder. */
+function parseCodex(raw: string, dirName: string): ParseResult {
+  const lines = raw.split(/\r?\n/)
+  if (lines[0]?.trim() !== '---') return { ok: false, code: 'missing-frontmatter', reason: t('fm.missing') }
+  const close = lines.findIndex((line, i) => i > 0 && line.trim() === '---')
+  if (close <= 1) return { ok: false, code: 'missing-frontmatter', reason: t('fm.missing') }
+  const yamlText = lines.slice(1, close).join('\n')
+  let parsed: unknown
+  try {
+    parsed = parse(yamlText)
+  } catch (error) {
+    // Third-party skills write prose like `description: Build for AWS: ECS`; Codex quotes such
+    // lines and tries again before giving up.
+    const repaired = repairScalarFields(yamlText)
+    try {
+      if (repaired === undefined) throw error
+      parsed = parse(repaired)
+    } catch {
+      return { ok: false, code: 'invalid-yaml', reason: t('fm.yaml', firstLine(error)) }
+    }
+  }
+  if (!isMap(parsed)) return { ok: false, code: 'invalid-yaml', reason: t('fm.notMapping') }
+  // serde rejects a field of the wrong type, which fails the whole file.
+  for (const key of ['name', 'description'] as const) {
+    const value = parsed[key]
+    if (value !== undefined && value !== null && typeof value !== 'string') {
+      return { ok: false, code: 'invalid-yaml', reason: t('fm.notString', key) }
+    }
+  }
+  const meta = parsed.metadata
+  if (meta !== undefined && meta !== null && (!isMap(meta) || (meta['short-description'] != null && typeof meta['short-description'] !== 'string'))) {
+    return { ok: false, code: 'invalid-yaml', reason: t('fm.notString', 'metadata.short-description') }
+  }
+  const singleLine = (v: unknown) => (typeof v === 'string' ? v.split(/\s+/).filter(Boolean).join(' ') : '')
+  const name = singleLine(parsed.name) || dirName
+  const rawName = typeof parsed.name === 'string' ? parsed.name : undefined
+  if (!name) return { ok: false, code: 'missing-name-or-description', reason: t('fm.noName'), rawName }
+  if ([...name].length > CODEX_MAX_NAME) return { ok: false, code: 'invalid-name', reason: t('fm.tooLong', 'name', CODEX_MAX_NAME), rawName }
+  const description = singleLine(parsed.description)
+  if (!description) return { ok: false, code: 'missing-name-or-description', reason: t('fm.noDescription'), rawName }
+  const skill: ParsedSkill = {
+    name,
+    description,
+    invocation: { modelInvocable: true, userInvocable: true },
+    body: lines.slice(close + 1).join('\n').trim(),
+  }
+  if (isMap(meta)) skill.metadata = meta
+  return { ok: true, skill }
+}
+
+/** Port of codex-rs `repair_frontmatter_scalar_fields`: quote `key: prose: with colons`. */
+function repairScalarFields(frontmatter: string): string | undefined {
+  let changed = false
+  let blockIndent: number | undefined
+  const out: string[] = []
+  for (const line of frontmatter.split('\n')) {
+    const indent = line.length - line.replace(/^ +/, '').length
+    if (blockIndent !== undefined) {
+      if (line.trim() === '' || indent > blockIndent) {
+        out.push(line)
+        continue
+      }
+      blockIndent = undefined
+    }
+    const colon = line.indexOf(':')
+    const key = line.slice(0, colon)
+    const value = line.slice(colon + 1)
+    if (colon < 0 || key.trim() === '' || (value !== '' && !/^\s/.test(value))) {
+      out.push(line)
+      continue
+    }
+    const trimmedStart = value.trimStart()
+    const leading = value.slice(0, value.length - trimmedStart.length)
+    let scalar = trimmedStart
+    let comment = ''
+    for (let i = 0; i < trimmedStart.length; i++) {
+      if (trimmedStart[i] === '#' && (i === 0 || /\s/.test(trimmedStart[i - 1]!))) {
+        const commentStart = trimmedStart.slice(0, i).trimEnd().length
+        scalar = trimmedStart.slice(0, commentStart)
+        comment = trimmedStart.slice(commentStart)
+        break
+      }
+    }
+    scalar = scalar.trimEnd()
+    const first = scalar[0]
+    if (first === undefined || first === "'" || first === '"') {
+      out.push(line)
+      continue
+    }
+    if (first === '|' || first === '>') {
+      blockIndent = indent
+      out.push(line)
+      continue
+    }
+    const invalidFlow = '[{@`'.includes(first) && !parsesAsYaml(scalar)
+    if (!/:\s/.test(scalar) && !invalidFlow) {
+      out.push(line)
+      continue
+    }
+    out.push(`${key}:${leading}'${scalar.replaceAll("'", "''")}'${comment}`)
+    changed = true
+  }
+  return changed ? out.join('\n') : undefined
+}
+
+function parsesAsYaml(text: string): boolean {
+  try {
+    parse(text)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function isMap(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/** The text between an opening `---` on the first line and the next `---` line, unparsed. */
+function frontmatterBlock(raw: string): { yaml: string; body: string } | undefined {
   const firstLineEnd = raw.indexOf('\n')
   if (firstLineEnd < 0) return undefined
   if (raw.slice(0, firstLineEnd).replace(/\r$/, '') !== '---') return undefined
@@ -82,14 +290,20 @@ export function splitFrontmatter(raw: string): { data: Record<string, unknown>; 
     const nextNewline = raw.indexOf('\n', lineStart)
     const lineEnd = nextNewline < 0 ? raw.length : nextNewline
     if (raw.slice(lineStart, lineEnd).replace(/\r$/, '') === '---') {
-      const parsed: unknown = parse(raw.slice(start, lineStart))
-      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return undefined
-      return { data: parsed as Record<string, unknown>, body: raw.slice(nextNewline < 0 ? raw.length : nextNewline + 1) }
+      return { yaml: raw.slice(start, lineStart), body: raw.slice(nextNewline < 0 ? raw.length : nextNewline + 1) }
     }
     if (nextNewline < 0) return undefined
     lineStart = nextNewline + 1
   }
   return undefined
+}
+
+export function splitFrontmatter(raw: string): { data: Record<string, unknown>; body: string } | undefined {
+  const block = frontmatterBlock(raw)
+  if (!block) return undefined
+  const parsed: unknown = parse(block.yaml)
+  if (!isMap(parsed)) return undefined
+  return { data: parsed, body: block.body }
 }
 
 function parseInvocationPolicy(data: Record<string, unknown>): InvocationPolicy {
@@ -128,7 +342,7 @@ function stringField(data: Record<string, unknown>, key: string): string | undef
 }
 
 function firstLine(error: unknown): string {
-  return String(error instanceof Error ? error.message : error).split('\n')[0] ?? ''
+  return (String(error instanceof Error ? error.message : error).split('\n')[0] ?? '').replace(/:\s*$/, '')
 }
 
 /** dsh-tool-skill's catalog rendering: whitespace collapsed, cut at maxLength with "...". */

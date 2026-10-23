@@ -44,11 +44,13 @@ Finding codes are append-only: a code is never renamed or removed within 1.x, an
 
 | Code | Severity | Meaning |
 |---|---|---|
-| `dropped` | critical (info for a flat `.md` without frontmatter) | The platform silently ignores the file: bad YAML, missing name/description, non-kebab-case name, invalid invocation booleans or legacy keys |
-| `shadowed` | high (info when identical) | Another skill with the same name wins (dsh), or two copies conflict within one agent (Claude Code, Codex) |
-| `nested` | high | `SKILL.md` files deeper than `<root>/<name>/SKILL.md`; never discovered |
+| `dropped` | critical (info for a flat `.md` without frontmatter) | The agent silently ignores the file. dsh: bad YAML, missing name/description, non-kebab-case name, invalid invocation booleans or legacy keys. Claude Code: a name with refused characters, a reserved name, or a skill in a folder called `synced`. Codex: no frontmatter, YAML it can't repair, no description, or a name over 64 characters |
+| `shadowed` | high (info when identical) | Another skill with the same name wins (dsh, Claude Code: personal over project), or Codex lists both copies to the model |
+| `nested` | high | `SKILL.md` files deeper than the agent looks: `<root>/<name>/SKILL.md` for dsh and Claude Code, six levels for Codex; never discovered |
 | `unscanned-root` | high | Skills in a directory the platform doesn't read (e.g. `~/.claude/skills` for dsh) |
-| `description-truncated` | medium | The description is longer than the catalog limit (dsh: 500); the end is cut off. Only reported where the limit is known, so not in `--platform generic` |
+| `description-truncated` | medium | The description is longer than the catalog limit (dsh 500, Claude Code 1,536 including `when_to_use`, Codex 1,024); the end is cut off |
+| `frontmatter-ignored` | critical | Claude Code only: the frontmatter doesn't parse, so the skill loads with no fields. The model never sees the description; only `/name` works |
+| `no-description` | medium | Claude Code only: no `description`, so the body's first line is listed instead |
 | `model-invocation-disabled` | info | `disable-model-invocation: true`: only usable as `/name` |
 
 ## Usage evidence (area `usage`, from session logs)
@@ -66,7 +68,7 @@ Finding codes are append-only: a code is never renamed or removed within 1.x, an
 | `model-invocation-disabled` | critical | Upstream added `disable-model-invocation` |
 | `user-invocation-disabled` | critical | Upstream added `user-invocable: false` |
 | `description-changed` | critical when words were removed, high when only language/tone rules were added, else medium | The trigger text changed; `detail` has before/after and the words |
-| `description-truncated` | high | The new description crosses the catalog limit (only checked where the limit is known) |
+| `description-truncated` | high | The new description crosses the agent's catalog limit |
 | `description-grew` | low | The description grew a lot (costs catalog context every turn); checked on every platform |
 | `scripts-added` | high | New files under `scripts/`: review before use |
 | `scripts-changed` | medium | Existing scripts changed |

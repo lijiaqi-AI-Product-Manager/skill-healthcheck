@@ -75,10 +75,13 @@ export function renderCheck(r: CheckResult, options: { all?: boolean } = {}): st
   counts.broken += extraCount
   const total = r.verdicts.length + extraCount
   const bundled = r.verdicts.filter((v) => v.provenance.kind === 'bundled').length
+  // "Unchecked" means nothing is wrong locally and the upstream is unknown or unreachable:
+  // count it as working (a self-written skill has no upstream) and say what wasn't checked.
+  const notChecked = r.verdicts.filter((v) => v.provenance.kind === 'unknown' || v.upstream?.state === 'unreachable').length
   lines.push(
     label('r.skills') +
-      t('r.skillCounts', total, counts.ok, colorCount(counts.update, c.cyan), colorCount(counts.broken, c.red)) +
-      (counts.unchecked ? c.dim(t('r.unchecked', counts.unchecked)) : '') +
+      t('r.skillCounts', total, counts.ok + counts.unchecked, colorCount(counts.update, c.cyan), colorCount(counts.broken, c.red)) +
+      (notChecked ? c.dim(t('r.unchecked', notChecked)) : '') +
       (bundled ? c.dim(t('r.bundled', bundled)) : ''),
   )
   for (const v of r.verdicts) {

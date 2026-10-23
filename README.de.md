@@ -11,9 +11,7 @@
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome">
 </p>
 
-<p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&pause=1200&color=3FB950&center=true&vCenter=true&width=720&lines=Find+skills+that+silently+stopped+working;Know+when+your+agent%27s+behavior+changed" alt="Find skills that silently stopped working">
-</p>
+<p align="center"><b>Finde Agent Skills, die still aufgehört haben zu funktionieren – und wann sich das Verhalten deines Agenten geändert hat.</b><br>Claude Code · Codex · DeepSeek Harness</p>
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/lijiaqimun-coder/skill-healthcheck/main/docs/demo.png" alt="skill-healthcheck: one checkup flags a skill whose upstream description changed" width="900">
@@ -66,7 +64,13 @@ Die Ausgabe folgt der Sprache deines Systems; `--lang zh` oder `--lang en` erzwi
 
 ## Installation
 
-Erfordert Node.js 22.19+ und git.
+Erfordert Node.js 22.19+ und git. Ohne Installation ausprobieren:
+
+```bash
+npx skill-healthcheck
+```
+
+Oder installieren:
 
 ```bash
 npm install -g skill-healthcheck
@@ -78,7 +82,7 @@ Aus dem Quellcode:
 git clone https://github.com/lijiaqimun-coder/skill-healthcheck && cd skill-healthcheck && npm install && npm run build && npm link
 ```
 
-In Festlandchina installiert der npmmirror-Spiegel meist schneller: `npm install -g skill-healthcheck --registry=https://registry.npmmirror.com`
+In Festlandchina installiert der npmmirror-Spiegel meist schneller: hänge `--registry=https://registry.npmmirror.com` an einen der beiden Befehle.
 
 
 ## Verwendung
@@ -114,7 +118,14 @@ dsh plugin --profile desktop add dsh-skill-healthcheck
 
 ## Mit Claude Code und Codex
 
-Ohne dsh läuft `skill-healthcheck` im generischen Modus. Es liest die Skills, die jeder Agent tatsächlich lädt (Claude Code: `.claude/skills`, `~/.claude/skills`; Codex: `.codex/skills`, `.agents/skills`, `~/.agents/skills`, `$CODEX_HOME/skills`) und füllt die Historie aus deren Sitzungsprotokollen (`~/.claude/projects`, `~/.codex/sessions`) nach: der Skill-Katalog, den das Modell über die Zeit gesehen hat, jeder Skill-Aufruf und die Sprache der Antworten. `why` funktioniert also auch dort. Ein Skill, der für beide Agenten installiert ist, ist kein Konflikt; zwei gleichnamige Kopien für einen Agenten schon.
+Ohne dsh läuft `skill-healthcheck` im generischen Modus. Es liest die Skills, die jeder Agent tatsächlich lädt, mit den Regeln des jeweiligen Agenten:
+
+- **Claude Code** (laut seiner Dokumentation): `~/.claude/skills`, `~/.claude/skills/synced` und `.claude/skills` in jedem Ordner von deinem Startverzeichnis bis zur Repository-Wurzel. Namen müssen nicht kebab-case sein, eine fehlende description wird durch die erste Zeile des Bodys ersetzt, und ein kaputtes Frontmatter wird ohne alle Felder geladen — das wird gemeldet, weil das Modell die description dann nie sieht. Persönliche Skills gewinnen gegen Projekt-Skills.
+- **Codex** (laut seinem Quellcode): `.agents/skills` von der Repository-Wurzel bis zu deinem Startverzeichnis, `.codex/skills`, `~/.agents/skills`, `$CODEX_HOME/skills`, bis zu sechs Ordner tief. Eine description ist Pflicht; gleichnamige Skills werden dem Modell beide gelistet.
+
+Es füllt außerdem die Historie aus den Sitzungsprotokollen der beiden nach (`~/.claude/projects`, `~/.codex/sessions`): der Skill-Katalog, den das Modell über die Zeit gesehen hat, jeder Skill-Aufruf und die Sprache der Antworten. `why` funktioniert also auch dort. Ein Skill, der für beide Agenten installiert ist, ist kein Konflikt.
+
+Skills aus Claude-Code-Plugins (`/plugin:skill`) werden vom Plugin-Manager von Claude Code installiert und aktualisiert, deshalb werden sie hier nicht gescannt und ihr Upstream nicht geprüft; ihre description-Änderungen erreichen `why` trotzdem über die Sitzungsprotokolle.
 
 Damit das Journal von selbst weiterläuft, zeichne zu Beginn jeder Claude-Code-Sitzung mit einem Hook in `~/.claude/settings.json` auf:
 
@@ -146,11 +157,11 @@ Für Codex führe `skill-healthcheck record` einmal täglich aus cron oder der A
 
 | Problem | Warum es still fehlschlägt |
 |---|---|
-| Ungültiges Frontmatter (name nicht kebab-case, Boolescher Wert falsch geschrieben, alter Feldname) | dsh verwirft das ganze Skill und schreibt nur eine Warnzeile ins Log |
-| Von einem gleichnamigen Skill verdeckt | Ein gleichnamiges Skill unter dem projektweiten `.dsh/skills` verdeckt das global installierte |
-| Zu tief verschachtelt | Nur `<root>/<name>/SKILL.md` wird erkannt; ein komplett geklontes Skill-Repository aktiviert dort kein einziges Skill |
+| Ungültiges Frontmatter | dsh und Codex verwerfen das ganze Skill; Claude Code lädt es ohne description, sodass das Modell es nie wählt |
+| Von einem gleichnamigen Skill verdeckt | Bei dsh gewinnt die Projekt-Kopie, bei Claude Code die persönliche; Codex listet beide und das Modell wählt vielleicht falsch |
+| Zu tief verschachtelt | dsh und Claude Code lesen nur `<root>/<name>/SKILL.md`; ein komplett geklontes Skill-Repository aktiviert dort kein einziges Skill |
 | Falsches Verzeichnis | dsh durchsucht weder `~/.claude/skills` noch `~/.codex/skills` |
-| description über 500 Zeichen | Sie wird im Katalog abgeschnitten, sodass das Modell die Triggerwörter am Ende nie sieht |
+| description über dem Kataloglimit | dsh schneidet bei 500 Zeichen ab, Codex bei 1024, Claude Code bei 1536: die Triggerwörter am Ende gehen verloren |
 | Früher oft genutzt, dann eines Tages nie wieder | Die Belege aus dem Sitzungsprotokoll sind stärker als jede Vermutung |
 
 **Skills: Upstream (git, jede Hosting-Plattform)**
@@ -171,7 +182,7 @@ Für Codex führe `skill-healthcheck record` einmal täglich aus cron oder der A
 
 ## Zuordnung: `why`
 
-Das Tool protokolliert ab dem allerersten Lauf (`~/.skill-healthcheck/journal.jsonl`): was installiert, was geändert, was gelöscht wurde, mit dem vollständigen Text jeder Version jedes `SKILL.md`. `why` kombiniert dieses Journal mit den Sitzungsprotokollen von dsh (die den Skill-Katalog enthalten, den das Modell jeweils gesehen hat, in zeitlicher Reihenfolge) und sortiert die Verdächtigen:
+Das Tool protokolliert ab dem allerersten Lauf (`~/.skill-healthcheck/journal.jsonl`): was installiert, was geändert, was gelöscht wurde, mit dem vollständigen Text jeder Version jedes `SKILL.md`. `why` kombiniert dieses Journal mit den Sitzungsprotokollen des Agenten (die den Skill-Katalog enthalten, den das Modell jeweils gesehen hat, in zeitlicher Reihenfolge) und sortiert die Verdächtigen:
 
 - **Symptom-Lexikon**: ordnet „antwortet nicht mehr auf Chinesisch“ Sprachregeln zu (`respond in English`, `professional tone`, `默认使用英文`, …)
 - **Zeit**: Änderungen näher am Symptombeginn sind verdächtiger; spätere Änderungen werden abgewertet
@@ -206,13 +217,13 @@ In diesem Datensatz haben 37 Upstream-Änderungen Wörter aus der description en
 | Plattform | Umfang |
 |---|---|
 | DeepSeek Harness (dsh) | Vollständig: bildet Scan-Reihenfolge und Parsing-Regeln von dsh nach, füllt Sitzungsprotokolle nach, prüft Plugins und Host |
-| Claude Code und Codex (generischer Modus) | Die Skill-Wurzeln des jeweiligen Agenten, lokale und Upstream-Prüfungen, Nachfüllen aus den Protokollen beider Agenten |
+| Claude Code und Codex (generischer Modus) | Die Skill-Wurzeln und Parsing-Regeln des jeweiligen Agenten, lokale und Upstream-Prüfungen, Nachfüllen aus den Sitzungsprotokollen |
 
 Bei erkanntem `~/.dsh/profiles` schaltet es automatisch in den dsh-Modus; mit `--platform` lässt sich das auch erzwingen.
 
 ## Wie die Quelle eines Skills bestimmt wird
 
-dsh selbst hält nicht fest, woher ein Skill installiert wurde, deshalb probiert das Tool diese Reihenfolge und sagt sonst „Quelle unbekannt“, statt zu raten:
+Die Agenten halten nicht fest, woher ein Skill installiert wurde, deshalb probiert das Tool diese Reihenfolge und sagt sonst „Quelle unbekannt“, statt zu raten:
 
 1. Eine mit `skill-healthcheck adopt` registrierte Quelle
 2. `metadata.source` im Frontmatter

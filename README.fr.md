@@ -11,9 +11,7 @@
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome">
 </p>
 
-<p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&pause=1200&color=3FB950&center=true&vCenter=true&width=720&lines=Find+skills+that+silently+stopped+working;Know+when+your+agent%27s+behavior+changed" alt="Find skills that silently stopped working">
-</p>
+<p align="center"><b>Trouvez les agent skills qui ont cessé de fonctionner en silence, et quand le comportement de votre agent a changé.</b><br>Claude Code · Codex · DeepSeek Harness</p>
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/lijiaqimun-coder/skill-healthcheck/main/docs/demo.png" alt="skill-healthcheck: one checkup flags a skill whose upstream description changed" width="900">
@@ -66,7 +64,13 @@ La sortie suit la langue de votre système ; `--lang zh` ou `--lang en` en impos
 
 ## Installation
 
-Nécessite Node.js 22.19+ et git.
+Nécessite Node.js 22.19+ et git. Essayez sans l'installer :
+
+```bash
+npx skill-healthcheck
+```
+
+Ou installez-le :
 
 ```bash
 npm install -g skill-healthcheck
@@ -78,7 +82,7 @@ Depuis les sources :
 git clone https://github.com/lijiaqimun-coder/skill-healthcheck && cd skill-healthcheck && npm install && npm run build && npm link
 ```
 
-En Chine continentale le miroir npmmirror est généralement plus rapide : `npm install -g skill-healthcheck --registry=https://registry.npmmirror.com`
+En Chine continentale le miroir npmmirror est généralement plus rapide : ajoutez `--registry=https://registry.npmmirror.com` à l'une ou l'autre des commandes.
 
 
 ## Utilisation
@@ -114,7 +118,14 @@ dsh plugin --profile desktop add dsh-skill-healthcheck
 
 ## Avec Claude Code et Codex
 
-Sans dsh, `skill-healthcheck` fonctionne en mode générique. Il lit les skills que chaque agent charge réellement (Claude Code : `.claude/skills`, `~/.claude/skills` ; Codex : `.codex/skills`, `.agents/skills`, `~/.agents/skills`, `$CODEX_HOME/skills`) et reconstitue l'historique depuis leurs journaux de session (`~/.claude/projects`, `~/.codex/sessions`) : le catalogue de skills vu par le modèle au fil du temps, chaque appel de skill et la langue des réponses. `why` fonctionne donc là aussi. Un skill installé pour les deux agents n'est pas un conflit ; deux copies du même nom pour un seul agent en sont un.
+Sans dsh, `skill-healthcheck` fonctionne en mode générique. Il lit les skills que chaque agent charge réellement, avec les règles propres à cet agent :
+
+- **Claude Code** (d'après sa documentation) : `~/.claude/skills`, `~/.claude/skills/synced`, et `.claude/skills` dans chaque dossier depuis votre point de départ jusqu'à la racine du dépôt. Les noms n'ont pas besoin d'être en kebab-case, une description absente retombe sur la première ligne du corps, et un frontmatter cassé se charge sans aucun champ, ce qui est signalé car le modèle ne voit alors jamais la description. Les skills personnels l'emportent sur ceux du projet.
+- **Codex** (d'après son code source) : `.agents/skills` de la racine du dépôt jusqu'à votre point de départ, `.codex/skills`, `~/.agents/skills`, `$CODEX_HOME/skills`, jusqu'à six dossiers de profondeur. La description est obligatoire ; les skills de même nom sont tous les deux listés pour le modèle.
+
+Il reconstitue aussi l'historique depuis leurs journaux de session (`~/.claude/projects`, `~/.codex/sessions`) : le catalogue de skills vu par le modèle au fil du temps, chaque appel de skill et la langue des réponses. `why` fonctionne donc là aussi. Un skill installé pour les deux agents n'est pas un conflit.
+
+Les skills des plugins Claude Code (`/plugin:skill`) sont installés et mis à jour par le gestionnaire de plugins de Claude Code : ils ne sont ni analysés ni vérifiés côté upstream ; leurs changements de description arrivent quand même dans `why` via les journaux de session.
 
 Pour que le journal continue tout seul, enregistrez au début de chaque session Claude Code avec un hook dans `~/.claude/settings.json` :
 
@@ -146,11 +157,11 @@ Pour Codex, lancez `skill-healthcheck record` depuis cron ou le Planificateur de
 
 | Problème | Pourquoi l'échec est silencieux |
 |---|---|
-| frontmatter invalide (name pas en kebab-case, booléen mal orthographié, ancien nom de champ) | dsh écarte le skill entier et n'écrit qu'une ligne d'avertissement dans le log |
-| Masqué par un skill de même nom | Un skill du même nom dans le `.dsh/skills` du projet masque celui installé globalement |
-| Imbrication trop profonde | Seul `<root>/<name>/SKILL.md` est reconnu ; clonez un dépôt de skills entier à cet endroit et aucun ne s'active |
+| frontmatter invalide | dsh et Codex écartent le skill entier ; Claude Code le charge sans description, donc le modèle ne le choisit jamais |
+| Masqué par un skill de même nom | dsh fait gagner la copie du projet, Claude Code la copie personnelle ; Codex liste les deux et le modèle peut mal choisir |
+| Imbrication trop profonde | dsh et Claude Code ne lisent que `<root>/<name>/SKILL.md` ; clonez un dépôt de skills entier à cet endroit et aucun ne s'active |
 | Mauvais dossier | dsh n'analyse ni `~/.claude/skills` ni `~/.codex/skills` |
-| description de plus de 500 caractères | Elle est tronquée dans le catalogue, donc le modèle ne voit jamais les mots déclencheurs de la fin |
+| description au-delà de la limite du catalogue | dsh la coupe à 500 caractères, Codex à 1024, Claude Code à 1536 : les mots déclencheurs de la fin sont perdus |
 | Longtemps utilisé, puis plus jamais invoqué du jour au lendemain | Les preuves du journal de session valent mieux que n'importe quelle déduction |
 
 **Skills : upstream (git, n'importe quelle plateforme d'hébergement)**
@@ -171,7 +182,7 @@ Pour Codex, lancez `skill-healthcheck record` depuis cron ou le Planificateur de
 
 ## Attribution : `why`
 
-L'outil commence à journaliser dès le premier lancement (`~/.skill-healthcheck/journal.jsonl`) : ce qui a été installé, ce qui a changé, ce qui a été supprimé, avec le texte intégral de chaque version de chaque `SKILL.md`. `why` croise ce journal avec les journaux de session de dsh (qui contiennent, dans l'ordre, le catalogue de skills vu par le modèle à chaque fois) pour classer les suspects :
+L'outil commence à journaliser dès le premier lancement (`~/.skill-healthcheck/journal.jsonl`) : ce qui a été installé, ce qui a changé, ce qui a été supprimé, avec le texte intégral de chaque version de chaque `SKILL.md`. `why` croise ce journal avec les journaux de session de l'agent (qui contiennent, dans l'ordre, le catalogue de skills vu par le modèle à chaque fois) pour classer les suspects :
 
 - **Lexique de symptômes** : associe « il ne répond plus en chinois » à des règles de langue (`respond in English`, `professional tone`, `默认使用英文`, …)
 - **Temps** : les changements les plus proches du début du symptôme sont les plus suspects ; ceux survenus après sont pondérés à la baisse
@@ -206,13 +217,13 @@ Dans ce jeu de données, 37 changements upstream ont retiré des mots présents 
 | Plateforme | Niveau de prise en charge |
 |---|---|
 | DeepSeek Harness (dsh) | Complet : reproduit l'ordre d'analyse et les règles de parsing de dsh, complète les journaux de session, vérifie les plugins et le host |
-| Claude Code et Codex (mode générique) | Racines de skills propres à chaque agent, vérifications locales et upstream, complétion depuis les journaux des deux agents |
+| Claude Code et Codex (mode générique) | Racines de skills et règles d'analyse propres à chaque agent, vérifications locales et upstream, complétion depuis les journaux de session |
 
 Il passe automatiquement en mode dsh lorsqu'il détecte `~/.dsh/profiles` ; vous pouvez aussi le forcer avec `--platform`.
 
 ## Comment la source d'un skill est déterminée
 
-dsh ne conserve pas l'origine d'installation d'un skill, l'outil essaie donc dans cet ordre et, à défaut, répond « source inconnue » au lieu de deviner :
+Les agents ne conservent pas l'origine d'installation d'un skill, l'outil essaie donc dans cet ordre et, à défaut, répond « source inconnue » au lieu de deviner :
 
 1. Une source enregistrée avec `skill-healthcheck adopt`
 2. `metadata.source` dans le frontmatter

@@ -26,6 +26,7 @@ export function sandbox(kind: 'dsh' | 'generic' = 'dsh') {
     DSH_HOME: join(home, '.dsh'),
     DSH_AGENTS_HOME: join(home, '.agents'),
     SKILL_HEALTHCHECK_HOME: join(home, '.skill-healthcheck'),
+    CODEX_HOME: join(home, '.codex'),
     DSH_BUNDLED_SKILL_DIR: join(root, 'bundled'),
   }
   Object.assign(process.env, env)

@@ -4,9 +4,9 @@
 // (confirmed via the GitHub API for github.com) counts.
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, realpathSync } from 'node:fs'
-import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
+import { basename, dirname, isAbsolute, join, posix, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { parseSkillText, type ParsedSkill, type ParseResult } from './frontmatter.js'
+import { dialectOf, parseSkillText, type ParsedSkill, type ParseResult } from './frontmatter.js'
 import { git } from './git.js'
 import { t } from './i18n.js'
 import type { Store } from './journal.js'
@@ -272,8 +272,10 @@ export async function matchRepoSkills(
   const blobs = splitCatFileBatch(batch.stdout)
   const upstream = files.map((file, i) => {
     const raw = blobs[i] ?? ''
-    const parsed = parseSkillText(raw)
-    return { subpath: file === 'SKILL.md' ? '' : file.slice(0, -'/SKILL.md'.length), raw, name: parsed.ok ? parsed.skill.name : undefined }
+    const subpath = subpathOf(file)
+    // The most lenient reading: frontmatter name, else the folder name (Claude Code, Codex).
+    const parsed = parseSkillText(raw, { dialect: 'claude-code', dirName: posix.basename(subpath) })
+    return { subpath, raw, name: parsed.ok ? parsed.skill.name : undefined }
   })
   const matches: RepoMatch[] = []
   for (const skill of skills) {
@@ -362,7 +364,7 @@ async function diffAgainstLocal(
 ): Promise<UpstreamResult> {
   const { gitDir, commit } = repo
   const scripts = await scriptDiff(gitDir, commit, subpath, skill)
-  if (sameSkillText(upstreamRaw, skill.raw) && !scripts.added.length && !scripts.changed.length && !scripts.removed.length) {
+  if (sameSkillText(skill, upstreamRaw) &&!scripts.added.length && !scripts.changed.length && !scripts.removed.length) {
     return { state: 'current', commit }
   }
   const file = skillFilePath(subpath, skill.kind)
@@ -377,19 +379,26 @@ async function diffAgainstLocal(
     commit,
     date: log.stdout.trim() || undefined,
     raw: upstreamRaw,
-    parse: parseSkillText(upstreamRaw),
+    parse: parseAsInstalled(skill, upstreamRaw),
     scripts,
     localModified,
   }
 }
 
+/**
+ * Read upstream text the way this skill's agent will once it's installed: same dialect, and
+ * the local folder name, which is what a name-less Claude Code or Codex skill is called.
+ */
+function parseAsInstalled(skill: InstalledSkill, raw: string): ParseResult {
+  return parseSkillText(raw, { dialect: dialectOf(skill.root.agent), dirName: basename(skill.dir) })
+}
+
 /** Same content once line endings, a BOM and frontmatter-only metadata edits are ignored. */
-function sameSkillText(upstreamRaw: string, localRaw: string): boolean {
-  if (normalize(upstreamRaw) === normalize(localRaw)) return true
-  const up = parseSkillText(upstreamRaw)
-  const mine = parseSkillText(localRaw)
-  if (!up.ok || !mine.ok) return false
-  return sameParsedSkill(up.skill, mine.skill)
+function sameSkillText(skill: InstalledSkill, upstreamRaw: string): boolean {
+  if (normalize(upstreamRaw) === normalize(skill.raw)) return true
+  const up = parseAsInstalled(skill, upstreamRaw)
+  if (!up.ok) return false
+  return sameParsedSkill(up.skill, skill.skill)
 }
 
 /** Everything a check looks at; `metadata` (where adopt recommends recording the source) is not. */
@@ -397,6 +406,7 @@ function sameParsedSkill(a: ParsedSkill, b: ParsedSkill): boolean {
   return (
     a.name === b.name &&
     a.description === b.description &&
+    a.whenToUse === b.whenToUse &&
     a.invocation.modelInvocable === b.invocation.modelInvocable &&
     a.invocation.userInvocable === b.invocation.userInvocable &&
     normalize(a.body) === normalize(b.body)
@@ -455,7 +465,7 @@ async function findMovedSkill(gitDir: string, commit: string, skill: InstalledSk
   candidates.forEach((file, i) => {
     const raw = blobs[i]
     if (raw === undefined) return
-    const parsed = parseSkillText(raw)
+    const parsed = parseSkillText(raw, { dialect: dialectOf(skill.root.agent), dirName: posix.basename(posix.dirname(file)) })
     const score = parsed.ok && parsed.skill.name === skill.skill.name ? 1 : similarity(raw, skill.raw)
     if (!best || score > best.score) best = { file, score }
   })

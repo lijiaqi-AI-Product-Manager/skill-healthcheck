@@ -11,9 +11,7 @@ English | [中文](README.zh.md) | [日本語](README.ja.md) | [한국어](READM
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome">
 </p>
 
-<p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&pause=1200&color=3FB950&center=true&vCenter=true&width=720&lines=Find+skills+that+silently+stopped+working;Know+when+your+agent%27s+behavior+changed" alt="Find skills that silently stopped working">
-</p>
+<p align="center"><b>Find agent skills that silently stopped working, and when your agent's behavior changed.</b><br>Claude Code · Codex · DeepSeek Harness</p>
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/lijiaqimun-coder/skill-healthcheck/main/docs/demo.png" alt="skill-healthcheck: one checkup flags a skill whose upstream description changed" width="900">
@@ -66,7 +64,13 @@ Output follows your system language; `--lang zh` or `--lang en` picks one.
 
 ## Install
 
-Requires Node.js 22.19+ and git.
+Requires Node.js 22.19+ and git. Try it without installing:
+
+```bash
+npx skill-healthcheck
+```
+
+Or install it:
 
 ```bash
 npm install -g skill-healthcheck
@@ -78,7 +82,7 @@ From source:
 git clone https://github.com/lijiaqimun-coder/skill-healthcheck && cd skill-healthcheck && npm install && npm run build && npm link
 ```
 
-In mainland China the npmmirror mirror usually installs faster: `npm install -g skill-healthcheck --registry=https://registry.npmmirror.com`
+In mainland China the npmmirror mirror usually installs faster: add `--registry=https://registry.npmmirror.com` to either command.
 
 
 ## Usage
@@ -114,7 +118,14 @@ dsh plugin --profile desktop add dsh-skill-healthcheck
 
 ## With Claude Code and Codex
 
-Without dsh, `skill-healthcheck` runs in generic mode. It reads the skills each agent actually loads (Claude Code: `.claude/skills`, `~/.claude/skills`; Codex: `.codex/skills`, `.agents/skills`, `~/.agents/skills`, `$CODEX_HOME/skills`) and backfills history from their session logs (`~/.claude/projects`, `~/.codex/sessions`): the skill catalog the model saw over time, every skill call, and the language of replies. So `why` works there too. A skill installed for both agents is not a conflict; two same-name copies for one agent are.
+Without dsh, `skill-healthcheck` runs in generic mode. It reads the skills each agent actually loads, with that agent's own rules:
+
+- **Claude Code** (from its documentation): `~/.claude/skills`, `~/.claude/skills/synced`, and `.claude/skills` in every folder from where you start up to the repo root. Names don't need to be kebab-case, a missing description falls back to the body's first line, and a broken frontmatter loads with no fields, which is reported because the model then never sees the description. Personal skills win over project skills.
+- **Codex** (from its source): `.agents/skills` from the repo root down to where you start, `.codex/skills`, `~/.agents/skills`, `$CODEX_HOME/skills`, up to six folders deep. A description is required; same-name skills are both listed to the model.
+
+It also backfills history from their session logs (`~/.claude/projects`, `~/.codex/sessions`): the skill catalog the model saw over time, every skill call, and the language of replies. So `why` works there too. A skill installed for both agents is not a conflict.
+
+Claude Code plugin skills (`/plugin:skill`) are installed and updated by Claude Code's plugin manager, so they aren't scanned or checked upstream; their description changes still reach `why` through the session logs.
 
 To keep the journal going on its own, record at the start of every Claude Code session with a hook in `~/.claude/settings.json`:
 
@@ -146,11 +157,11 @@ For Codex, run `skill-healthcheck record` from cron or Task Scheduler once a day
 
 | Problem                                                                                         | Why it fails silently                                                                                       |
 | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Invalid frontmatter (name isn't kebab-case, a boolean is misspelled, an old field name is used) | dsh drops the entire skill and only logs a single warning line                                              |
-| Shadowed by a same-name skill                                                                   | A skill of the same name under the project-level `.dsh/skills` shadows the one you installed globally       |
-| Nested too deep                                                                                 | Only `<root>/<name>/SKILL.md` is recognized; clone a whole skill repo in there and none of them take effect |
+| Invalid frontmatter                                                                             | dsh and Codex drop the whole skill; Claude Code loads it with no description, so the model never picks it   |
+| Shadowed by a same-name skill                                                                   | dsh lets the project copy win, Claude Code the personal one; Codex lists both and the model may pick wrong  |
+| Nested too deep                                                                                 | dsh and Claude Code only read `<root>/<name>/SKILL.md`; clone a whole skill repo in there and none load     |
 | Wrong directory                                                                                 | dsh doesn't scan `~/.claude/skills` or `~/.codex/skills`                                                    |
-| description over 500 characters                                                                 | It gets truncated in the catalog, so the model never sees the trigger words at the end                      |
+| description over the catalog limit                                                              | dsh cuts it at 500 characters, Codex at 1,024, Claude Code at 1,536: the trigger words at the end are lost  |
 | Used to be invoked often, then one day never again                                              | Evidence from the session log beats any inference                                                           |
 
 **Skills: upstream (git, any hosting platform)**
@@ -171,7 +182,7 @@ For Codex, run `skill-healthcheck record` from cron or Task Scheduler once a day
 
 ## Attribution: `why`
 
-The tool starts journaling from its very first run (`~/.skill-healthcheck/journal.jsonl`): what was installed, what changed, what was deleted, with the full text of every version of every `SKILL.md`. `why` combines that journal with dsh's own session logs (which contain the skill catalog the model saw each time, in order) to rank the suspects:
+The tool starts journaling from its very first run (`~/.skill-healthcheck/journal.jsonl`): what was installed, what changed, what was deleted, with the full text of every version of every `SKILL.md`. `why` combines that journal with the agent's own session logs (which contain the skill catalog the model saw each time, in order) to rank the suspects:
 
 - **Symptom lexicon**: maps "it stopped answering in Chinese" to language rules (`respond in English`, `professional tone`, `默认使用英文`, …)
 - **Time**: changes closer to when the symptom started are more suspicious; changes that happened after it are down-weighted
@@ -206,13 +217,13 @@ In this dataset, 37 upstream changes removed words that had been in the descript
 | Platform                                        | Level of support                                                                                      |
 | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | DeepSeek Harness (dsh)                          | Full: mirrors dsh's scan order and parsing rules, backfills session logs, checks plugins and the host |
-| Claude Code and Codex (generic mode)            | Each agent's own skill roots, local plus upstream checks, session-log backfill from both agents       |
+| Claude Code and Codex (generic mode)            | Each agent's own skill roots and parsing rules, local plus upstream checks, session-log backfill      |
 
 It switches to dsh mode automatically when `~/.dsh/profiles` is detected; you can also set it with `--platform`.
 
 ## How a skill's source is determined
 
-dsh itself doesn't record where a skill was installed from, so it tries these in order, and says "source unknown" instead of guessing:
+Agents don't record where a skill was installed from, so it tries these in order, and says "source unknown" instead of guessing:
 
 1. A source registered with `skill-healthcheck adopt`
 2. `metadata.source` in the frontmatter

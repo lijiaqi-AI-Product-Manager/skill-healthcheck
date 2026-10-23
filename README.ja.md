@@ -11,9 +11,7 @@
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome">
 </p>
 
-<p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&pause=1200&color=3FB950&center=true&vCenter=true&width=720&lines=Find+skills+that+silently+stopped+working;Know+when+your+agent%27s+behavior+changed" alt="Find skills that silently stopped working">
-</p>
+<p align="center"><b>静かに止まった agent skill と、エージェントの挙動が変わった時点を見つける。</b><br>Claude Code · Codex · DeepSeek Harness</p>
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/lijiaqimun-coder/skill-healthcheck/main/docs/demo.png" alt="skill-healthcheck: one checkup flags a skill whose upstream description changed" width="900">
@@ -66,7 +64,13 @@ Ranked by time and keywords, not a verdict. Disable #1 first to confirm.
 
 ## インストール
 
-Node.js 22.19 以上と git が必要です。
+Node.js 22.19 以上と git が必要です。インストールせずに試す:
+
+```bash
+npx skill-healthcheck
+```
+
+インストールする場合:
 
 ```bash
 npm install -g skill-healthcheck
@@ -78,7 +82,7 @@ npm install -g skill-healthcheck
 git clone https://github.com/lijiaqimun-coder/skill-healthcheck && cd skill-healthcheck && npm install && npm run build && npm link
 ```
 
-中国本土では npmmirror ミラーのほうが速いことが多いです: `npm install -g skill-healthcheck --registry=https://registry.npmmirror.com`
+中国本土では npmmirror ミラーのほうが速いことが多いです: 上のどちらのコマンドにも `--registry=https://registry.npmmirror.com` を付けてください。
 
 
 ## 使い方
@@ -114,7 +118,14 @@ dsh plugin --profile desktop add dsh-skill-healthcheck
 
 ## Claude Code と Codex と一緒に
 
-dsh がなくても `skill-healthcheck` は汎用モードで動きます。各エージェントが実際に読み込む skill を読み（Claude Code: `.claude/skills`、`~/.claude/skills`、Codex: `.codex/skills`、`.agents/skills`、`~/.agents/skills`、`$CODEX_HOME/skills`）、それぞれのセッションログ（`~/.claude/projects`、`~/.codex/sessions`）から履歴を補完します。モデルが時系列で見た skill カタログ、すべての skill 呼び出し、応答の言語。だから `why` もそこで動きます。同じ skill を両方のエージェントに入れても競合ではありません。1 つのエージェントに同名のコピーが 2 つある場合が競合です。
+dsh がなくても `skill-healthcheck` は汎用モードで動きます。各エージェントが実際に読み込む skill を、そのエージェント自身の規則で読みます:
+
+- **Claude Code**（公式ドキュメントの規則）: `~/.claude/skills`、`~/.claude/skills/synced`、そして起動したディレクトリからリポジトリのルートまでの各階層にある `.claude/skills`。name は kebab-case でなくてもよく、description がなければ本文の 1 行目で代用し、frontmatter が壊れていても全フィールドを無視して読み込みます（モデルは description を見られなくなるため、これは報告されます）。個人の skill がプロジェクトの skill より優先されます。
+- **Codex**（ソースコードの規則）: リポジトリのルートから起動ディレクトリまでの `.agents/skills`、`.codex/skills`、`~/.agents/skills`、`$CODEX_HOME/skills`、深さは最大 6 階層。description は必須で、同名の skill はどちらもモデルに列挙されます。
+
+それぞれのセッションログ（`~/.claude/projects`、`~/.codex/sessions`）から履歴も補完します。モデルが時系列で見た skill カタログ、すべての skill 呼び出し、応答の言語。だから `why` もそこで動きます。同じ skill を両方のエージェントに入れても競合ではありません。
+
+Claude Code のプラグインの skill（`/plugin:skill`）は Claude Code のプラグインマネージャーが導入・更新するため、ここでは走査も上流チェックも行いません。description の変化はセッションログ経由で `why` に届きます。
 
 記録を自動で続けるには、`~/.claude/settings.json` のフックで Claude Code のセッション開始時に記録します:
 
@@ -146,11 +157,11 @@ Codex の場合は、cron かタスクスケジューラから 1 日 1 回 `skil
 
 | 問題 | なぜ静かに壊れるのか |
 |---|---|
-| frontmatter が不正（name が kebab-case でない、真偽値の綴り違い、古いフィールド名） | dsh は skill ごと捨て、警告を 1 行ログに出すだけ |
-| 同名の skill による影 | プロジェクト側 `.dsh/skills` の同名 skill が、グローバルに入れたものを覆い隠す |
-| ネストが深すぎる | `<root>/<name>/SKILL.md` しか認識されない。skill リポジトリごと clone すると 1 つも有効にならない |
+| frontmatter が不正 | dsh と Codex は skill ごと捨て、Claude Code は description なしで読み込むため、モデルは決して選ばない |
+| 同名の skill による影 | dsh はプロジェクト側のコピー、Claude Code は個人側のコピーが優先。Codex は両方を列挙し、モデルが誤って選ぶことがある |
+| ネストが深すぎる | dsh と Claude Code は `<root>/<name>/SKILL.md` しか読まない。skill リポジトリごと clone すると 1 つも有効にならない |
 | 置き場所が違う | dsh は `~/.claude/skills` や `~/.codex/skills` を走査しない |
-| description が 500 文字を超える | カタログ側で切り詰められ、末尾のトリガー語がモデルに届かない |
+| description がディレクトリ上限を超える | dsh は 500 文字、Codex は 1024 文字、Claude Code は 1536 文字で切り詰められ、末尾のトリガー語が失われる |
 | 以前はよく呼ばれていたのに、ある日から呼ばれない | セッションログの証拠はどんな推測よりも強い |
 
 **skill: 上流（git、任意のホスティング）**
@@ -171,7 +182,7 @@ Codex の場合は、cron かタスクスケジューラから 1 日 1 回 `skil
 
 ## 帰属: `why`
 
-ツールは初回実行から記録します（`~/.skill-healthcheck/journal.jsonl`）。何を入れ、何が変わり、何が消えたか、そして全バージョンの `SKILL.md` 全文。`why` はこの記録と dsh 自身のセッションログ（モデルが毎回見た skill カタログが時系列で入っている）を突き合わせて、疑わしい順に並べます。
+ツールは初回実行から記録します（`~/.skill-healthcheck/journal.jsonl`）。何を入れ、何が変わり、何が消えたか、そして全バージョンの `SKILL.md` 全文。`why` はこの記録とエージェント自身のセッションログ（モデルが毎回見た skill カタログが時系列で入っている）を突き合わせて、疑わしい順に並べます。
 
 - **症状レキシコン**: 「中国語で答えてくれなくなった」を言語系の規則（`respond in English`、`professional tone`、`默认使用英文` など）に対応づける
 - **時間**: 症状の起点に近い変更ほど疑わしい。症状より後に起きた変更は重みを下げる
@@ -206,13 +217,13 @@ Codex の場合は、cron かタスクスケジューラから 1 日 1 回 `skil
 | プラットフォーム | 対応範囲 |
 |---|---|
 | DeepSeek Harness（dsh） | 完全: dsh の走査順と解析規則をそのまま再現し、セッションログを補完し、プラグインとホストも検査 |
-| Claude Code と Codex（汎用モード） | 各エージェント固有の skill ルート、ローカルと上流の検査、両エージェントのセッションログ補完 |
+| Claude Code と Codex（汎用モード） | 各エージェント固有の skill ルートと解析規則、ローカルと上流の検査、セッションログの補完 |
 
 `~/.dsh/profiles` を検出すると自動で dsh モードになります。`--platform` で明示もできます。
 
 ## skill の取得元の決め方
 
-dsh 自身は skill をどこから入れたかを記録しません。そのため次の順に探し、見つからなければ推測せず「取得元不明」と答えます。
+エージェントは skill をどこから入れたかを記録しません。そのため次の順に探し、見つからなければ推測せず「取得元不明」と答えます。
 
 1. `skill-healthcheck adopt` で登録された取得元
 2. frontmatter の `metadata.source`

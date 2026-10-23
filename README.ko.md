@@ -11,9 +11,7 @@
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome">
 </p>
 
-<p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&pause=1200&color=3FB950&center=true&vCenter=true&width=720&lines=Find+skills+that+silently+stopped+working;Know+when+your+agent%27s+behavior+changed" alt="Find skills that silently stopped working">
-</p>
+<p align="center"><b>조용히 멈춘 agent skill과 에이전트 동작이 언제 바뀌었는지 찾아냅니다.</b><br>Claude Code · Codex · DeepSeek Harness</p>
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/lijiaqimun-coder/skill-healthcheck/main/docs/demo.png" alt="skill-healthcheck: one checkup flags a skill whose upstream description changed" width="900">
@@ -66,7 +64,13 @@ Ranked by time and keywords, not a verdict. Disable #1 first to confirm.
 
 ## 설치
 
-Node.js 22.19 이상과 git이 필요합니다.
+Node.js 22.19 이상과 git이 필요합니다. 설치 없이 사용해 보려면:
+
+```bash
+npx skill-healthcheck
+```
+
+설치하려면:
 
 ```bash
 npm install -g skill-healthcheck
@@ -78,7 +82,7 @@ npm install -g skill-healthcheck
 git clone https://github.com/lijiaqimun-coder/skill-healthcheck && cd skill-healthcheck && npm install && npm run build && npm link
 ```
 
-중국 본토에서는 npmmirror 미러가 보통 더 빠릅니다: `npm install -g skill-healthcheck --registry=https://registry.npmmirror.com`
+중국 본토에서는 npmmirror 미러가 보통 더 빠릅니다: 위 두 명령 중 어느 쪽이든 `--registry=https://registry.npmmirror.com`를 붙이면 됩니다.
 
 
 ## 사용법
@@ -114,7 +118,14 @@ dsh plugin --profile desktop add dsh-skill-healthcheck
 
 ## Claude Code, Codex와 함께
 
-dsh가 없어도 `skill-healthcheck`는 일반 모드로 동작합니다. 각 에이전트가 실제로 불러오는 skill을 읽고(Claude Code: `.claude/skills`, `~/.claude/skills`; Codex: `.codex/skills`, `.agents/skills`, `~/.agents/skills`, `$CODEX_HOME/skills`), 각자의 세션 로그(`~/.claude/projects`, `~/.codex/sessions`)에서 이력을 채웁니다. 모델이 시간순으로 본 skill 카탈로그, 모든 skill 호출, 응답 언어까지. 그래서 `why`도 거기서 동작합니다. 같은 skill을 두 에이전트에 설치한 것은 충돌이 아닙니다. 한 에이전트에 같은 이름의 사본이 둘 있는 것이 충돌입니다.
+dsh가 없어도 `skill-healthcheck`는 일반 모드로 동작합니다. 각 에이전트가 실제로 불러오는 skill을 그 에이전트 자신의 규칙으로 읽습니다:
+
+- **Claude Code**(공식 문서 기준): `~/.claude/skills`, `~/.claude/skills/synced`, 그리고 시작한 디렉터리부터 저장소 루트까지 각 단계의 `.claude/skills`. name은 kebab-case가 아니어도 되고, description이 없으면 본문 첫 줄로 대신하며, frontmatter가 깨져도 모든 필드를 무시하고 불러옵니다(모델이 description을 보지 못하게 되므로 이 경우 보고합니다). 개인 skill이 프로젝트 skill보다 우선합니다.
+- **Codex**(소스 코드 기준): 저장소 루트부터 시작 디렉터리까지의 `.agents/skills`, `.codex/skills`, `~/.agents/skills`, `$CODEX_HOME/skills`, 최대 6단계 깊이. description은 필수이며, 같은 이름의 skill은 둘 다 모델에 나열됩니다.
+
+각자의 세션 로그(`~/.claude/projects`, `~/.codex/sessions`)에서 이력도 채웁니다. 모델이 시간순으로 본 skill 카탈로그, 모든 skill 호출, 응답 언어까지. 그래서 `why`도 거기서 동작합니다. 같은 skill을 두 에이전트에 설치한 것은 충돌이 아닙니다.
+
+Claude Code 플러그인의 skill(`/plugin:skill`)은 Claude Code의 플러그인 관리자가 설치·업데이트하므로 여기서 스캔하거나 업스트림을 검사하지 않습니다. description 변경은 세션 로그를 통해 `why`에 전달됩니다.
 
 기록을 자동으로 이어가려면 `~/.claude/settings.json`의 훅으로 Claude Code 세션 시작 시 기록하세요:
 
@@ -146,11 +157,11 @@ Codex는 cron이나 작업 스케줄러에서 하루 한 번 `skill-healthcheck 
 
 | 문제 | 왜 조용히 실패하나 |
 |---|---|
-| frontmatter가 잘못됨 (name이 kebab-case가 아님, 불리언 오타, 옛 필드 이름 사용) | dsh가 skill 전체를 버리고 경고 한 줄만 로그에 남깁니다 |
-| 같은 이름 skill에 가려짐 | 프로젝트 쪽 `.dsh/skills`의 동명 skill이 전역에 설치한 skill을 덮습니다 |
-| 너무 깊게 중첩됨 | `<root>/<name>/SKILL.md`만 인식합니다. skill 저장소를 통째로 clone하면 하나도 적용되지 않습니다 |
+| frontmatter가 잘못됨 | dsh와 Codex는 skill 전체를 버리고, Claude Code는 description 없이 불러오므로 모델이 선택하지 않습니다 |
+| 같은 이름 skill에 가려짐 | dsh는 프로젝트 사본, Claude Code는 개인 사본이 이깁니다. Codex는 둘 다 나열해 모델이 잘못 고를 수 있습니다 |
+| 너무 깊게 중첩됨 | dsh와 Claude Code는 `<root>/<name>/SKILL.md`만 읽습니다. skill 저장소를 통째로 clone하면 하나도 적용되지 않습니다 |
 | 잘못된 디렉터리 | dsh는 `~/.claude/skills`나 `~/.codex/skills`를 스캔하지 않습니다 |
-| description이 500자를 넘음 | 카탈로그에서 잘려 끝부분의 트리거 단어가 모델에 닿지 않습니다 |
+| description이 카탈로그 상한을 넘음 | dsh는 500자, Codex는 1024자, Claude Code는 1536자에서 잘려 끝부분의 트리거 단어가 사라집니다 |
 | 예전에는 자주 호출되다가 어느 날부터 호출되지 않음 | 세션 로그의 증거가 어떤 추론보다 강합니다 |
 
 **skill: 업스트림 (git, 모든 호스팅)**
@@ -171,7 +182,7 @@ Codex는 cron이나 작업 스케줄러에서 하루 한 번 `skill-healthcheck 
 
 ## 원인 추적: `why`
 
-도구는 첫 실행부터 기록합니다(`~/.skill-healthcheck/journal.jsonl`). 무엇을 설치했고 무엇이 바뀌었고 무엇이 삭제되었는지, 그리고 모든 버전의 `SKILL.md` 전문을 저장합니다. `why`는 이 기록과 dsh 자체의 세션 로그(모델이 매번 본 skill 카탈로그가 시간순으로 들어 있음)를 결합해 의심 항목의 순위를 매깁니다.
+도구는 첫 실행부터 기록합니다(`~/.skill-healthcheck/journal.jsonl`). 무엇을 설치했고 무엇이 바뀌었고 무엇이 삭제되었는지, 그리고 모든 버전의 `SKILL.md` 전문을 저장합니다. `why`는 이 기록과 에이전트 자체의 세션 로그(모델이 매번 본 skill 카탈로그가 시간순으로 들어 있음)를 결합해 의심 항목의 순위를 매깁니다.
 
 - **증상 사전**: "중국어로 답하지 않는다"를 언어 관련 규칙(`respond in English`, `professional tone`, `默认使用英文` 등)에 대응시킵니다
 - **시간**: 증상 시작점에 가까운 변경일수록 의심스럽고, 증상 이후의 변경은 가중치를 낮춥니다
@@ -206,13 +217,13 @@ Codex는 cron이나 작업 스케줄러에서 하루 한 번 `skill-healthcheck 
 | 플랫폼 | 지원 범위 |
 |---|---|
 | DeepSeek Harness(dsh) | 전체: dsh의 스캔 순서와 파싱 규칙을 그대로 따르고, 세션 로그를 채우며, 플러그인과 호스트까지 검사 |
-| Claude Code와 Codex(일반 모드) | 각 에이전트의 skill 루트, 로컬·업스트림 검사, 두 에이전트의 세션 로그 채우기 |
+| Claude Code와 Codex(일반 모드) | 각 에이전트의 skill 루트와 파싱 규칙, 로컬·업스트림 검사, 세션 로그 채우기 |
 
 `~/.dsh/profiles`가 감지되면 자동으로 dsh 모드가 됩니다. `--platform`으로 지정할 수도 있습니다.
 
 ## skill 출처를 정하는 방법
 
-dsh 자체는 skill을 어디서 설치했는지 기록하지 않습니다. 그래서 다음 순서로 찾고, 없으면 추측하지 않고 "출처 알 수 없음"이라고 답합니다.
+에이전트는 skill을 어디서 설치했는지 기록하지 않습니다. 그래서 다음 순서로 찾고, 없으면 추측하지 않고 "출처 알 수 없음"이라고 답합니다.
 
 1. `skill-healthcheck adopt`로 등록한 출처
 2. frontmatter의 `metadata.source`

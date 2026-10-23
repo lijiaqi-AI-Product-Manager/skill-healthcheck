@@ -16,7 +16,7 @@ describe('renderCheck', () => {
     write(join(s.DSH_HOME, 'skills', 'ok', 'SKILL.md'), skillMd({ name: 'ok', description: 'fine' }))
     const out = strip(renderCheck(await runCheck({ platform: 'dsh', cwd: s.project, sessions: false, offline: true, store: new Store() })))
     // "ok" has no known source, so it's healthy locally but unchecked upstream.
-    expect(out).toMatch(/技能 {2}2：0 正常 · 0 有更新 · 1 失效 · 1 未检查/)
+    expect(out).toMatch(/技能 {2}2：1 正常 · 0 有更新 · 1 失效（其中 1 个没查上游）/)
     expect(out).toContain('15 个技能嵌套太深')
     expect(out).toContain('技能 1 个需你逐个确认')
   })
