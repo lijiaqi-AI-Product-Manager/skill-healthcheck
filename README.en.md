@@ -2,7 +2,7 @@
 
 English | [中文](README.md)
 
-> Your agent got dumber lately? Blame the skill you installed three weeks ago.
+> Has your agent gotten dumber lately? It might be the skill you installed three weeks ago.
 
 When a plugin breaks, you know immediately: it won't install, it throws errors, it vanishes from the UI. **When a skill breaks, you never find out**: `SKILL.md` is still on disk, everything looks normal, and the model simply stops using it. The upstream may have changed the `description`, renamed the skill, deleted the repo — or a local skill with the same name is shadowing it. All you notice is that "the agent stopped listening" or "it doesn't answer in Chinese anymore", and then you go blame the model and your prompts.
 
@@ -91,7 +91,7 @@ Common options: `--all` expand everything, `--json` machine-readable, `--offline
 
 **Plugins (dsh)**: whether the plugins installed in a profile are compatible with the current dsh version (`engines.dsh` / peerDependencies), whether they run on a version exemption, whether npm has a newer release, and whether the author has deprecated them.
 
-**The summary line is deliberately asymmetric**: `插件 2 个可一键升级；技能 3 个需你逐个确认`. Plugins are npm packages with version numbers and rollbacks; skills are prompts — overwrite one and the old version is gone, and if its behavior changed you wouldn't know. So a human has to look.
+**The summary line is deliberately asymmetric**: `插件 2 个可一键升级；技能 3 个需你逐个确认` ("2 plugins can be upgraded in one click; 3 skills need you to review them one by one"). Plugins are npm packages with version numbers and rollbacks; skills are prompts — overwrite one and the old version is gone, and if its behavior changed you wouldn't know. So a human has to look.
 
 ## Attribution: `why`
 
@@ -144,9 +144,9 @@ dsh itself doesn't record where a skill was installed from, so it tries these in
 
 ```bash
 npm install
-npm test        # vitest：解析规则、发现规则、记录器、影响规则、上游（本地裸仓库）、归因、词典
-npm run demo    # 15 秒演示，全部在 demo/.sandbox 里进行
-node scripts/corpus-eval.mjs   # 在 74 条真实变更上跑影响规则（需要先 build，会联网取文件）
+npm test        # vitest: parsing, discovery, journal, impact rules, upstream (local bare repos), attribution, lexicon
+npm run demo    # 15-second demo, runs entirely inside demo/.sandbox
+node scripts/corpus-eval.mjs   # run the impact rules over 74 real changes (build first; fetches files from GitHub)
 ```
 
 ## Roadmap
@@ -157,6 +157,7 @@ node scripts/corpus-eval.mjs   # 在 74 条真实变更上跑影响规则（需�
 - [x] Plugin compatibility and upgrade checks (dsh)
 - [ ] dsh plugin shell `dsh-skill-healthcheck`: record on host startup, watch skill changes, expose `/skill-healthcheck`
 - [ ] Optional `--explain`: use an LLM to turn the diff into one plain sentence (off by default)
+- [ ] English output (`--lang en`)
 
 ## License
 

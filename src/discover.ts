@@ -126,7 +126,7 @@ function readText(path: string): string | undefined {
 
 function canonical(path: string): string {
   try {
-    return realpathSync(path).toLowerCase()
+    return realpathSync.native(path).toLowerCase()
   } catch {
     return path.toLowerCase()
   }

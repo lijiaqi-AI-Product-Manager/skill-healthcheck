@@ -60,9 +60,11 @@ export async function resolveProvenance(skill: InstalledSkill, platform: Platfor
   if (samePath(repo, platform.projectRoot) && !samePath(repo, skill.dir)) return { kind: 'project', repo }
   const remote = await git(['-C', repo, 'config', '--get', 'remote.origin.url'], { timeoutMs: 10_000 })
   if (!remote.ok || !remote.stdout.trim()) return { kind: 'unknown' }
-  // git reports the real path; resolve ours too, or /var vs /private/var (macOS tmp) breaks relative().
-  const target = realpathSync(skill.kind === 'bundle' ? skill.dir : skill.file)
-  const subpath = relative(realpathSync(repo), target).replaceAll('\\', '/')
+  // git reports the real path; resolve ours too, or /var vs /private/var (macOS tmp) and
+  // 8.3 short names like C:\Users\RUNNER~1 (Windows) break relative(). Only .native expands 8.3.
+  const target = realpathSync.native(skill.kind === 'bundle' ? skill.dir : skill.file)
+  const subpath = relative(realpathSync.native(repo), target).replaceAll('\\', '/')
+  if (subpath.startsWith('..')) return { kind: 'unknown' }
   return { kind: 'git', url: remote.stdout.trim(), subpath, via: 'checkout', localRepo: repo }
 }
 
@@ -330,7 +332,7 @@ function trimSlashes(s: string): string {
 function samePath(a: string, b: string): boolean {
   const real = (p: string) => {
     try {
-      return realpathSync(p)
+      return realpathSync.native(p)
     } catch {
       return resolve(p)
     }

@@ -155,6 +155,7 @@ node scripts/corpus-eval.mjs   # 在 74 条真实变更上跑影响规则（需�
 - [x] 插件兼容性与可升级检查（dsh）
 - [ ] dsh 插件外壳 `dsh-skill-healthcheck`：宿主启动时记录、监听技能变化、提供 `/skill-healthcheck`
 - [ ] 可选 `--explain`：用 LLM 把 diff 翻成一句人话（默认关闭）
+- [ ] 英文输出（`--lang en`）
 
 ## License
 
