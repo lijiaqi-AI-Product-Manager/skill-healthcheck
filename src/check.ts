@@ -33,6 +33,8 @@ export interface CheckOptions extends PlatformOptions {
   offline?: boolean
   sessions?: boolean
   store?: Store
+  /** Status text while network checks run (the CLI shows it on stderr). */
+  onProgress?: (text: string) => void
 }
 
 export const SEVERITY_ORDER: Severity[] = ['critical', 'high', 'medium', 'low', 'info']
@@ -54,7 +56,14 @@ export async function runCheck(options: CheckOptions = {}): Promise<CheckResult>
   const local = localFindings(inventory)
   const usage = usageFindings(inventory, sessions, timeline)
   const sources = store.readJsonFile<SourcesFile>(SOURCES_FILE) ?? {}
-  const checker = new UpstreamChecker(store, { offline: options.offline })
+  const fetched = new Set<string>()
+  const checker = new UpstreamChecker(store, {
+    offline: options.offline,
+    onFetch: (url) => {
+      fetched.add(url)
+      options.onProgress?.(`正在检查上游（第 ${fetched.size} 个仓库）：${url}`)
+    },
+  })
 
   const verdicts = await mapLimit(inventory.active, 4, async (skill): Promise<SkillVerdict> => {
     const provenance = await resolveProvenance(skill, platform, sources)
@@ -69,7 +78,9 @@ export async function runCheck(options: CheckOptions = {}): Promise<CheckResult>
 
   const activeNames = new Set(inventory.active.map((s) => s.skill.name))
   const orphanFindings = local.filter((f) => f.code === 'dropped' || f.code === 'shadowed' || f.code === 'nested' || f.code === 'unscanned-root' || !activeNames.has(f.subject))
+  if (!options.offline && platform.id === 'dsh') options.onProgress?.('正在检查插件版本…')
   const plugins = await checkPlugins(platform, { offline: options.offline })
+  options.onProgress?.('')
   return { platform, inventory, newEvents, verdicts, orphanFindings, plugins, pluginFindings: pluginFindings(plugins), sessions, timeline }
 }
 

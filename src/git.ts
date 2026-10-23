@@ -22,7 +22,7 @@ export function git(args: string[], options: { cwd?: string; input?: string; tim
   return new Promise((resolve) => {
     const child = execFile(
       'git',
-      ['-c', 'credential.interactive=never', '-c', 'core.quotepath=off', ...args],
+      ['-c', 'credential.interactive=never', '-c', 'core.quotepath=off', '-c', 'protocol.ext.allow=never', ...args],
       { cwd: options.cwd, env: GIT_ENV, timeout: options.timeoutMs ?? 30_000, maxBuffer: 64 * 1024 * 1024, windowsHide: true, encoding: 'utf8' },
       (error, stdout, stderr) => {
         const code: unknown = error ? (error as { code?: unknown }).code : 0

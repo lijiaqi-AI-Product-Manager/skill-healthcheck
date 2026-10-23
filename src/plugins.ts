@@ -25,7 +25,10 @@ export interface PluginReport {
 
 const DSH_SCOPE = '@deepseek-ai/'
 
-export async function checkPlugins(platform: PlatformInfo, options: { offline?: boolean } = {}): Promise<PluginReport | undefined> {
+/** `npm view <spec> --json`, injectable for tests. */
+export type RegistryView = (spec: string, cwd: string) => Promise<any | undefined>
+
+export async function checkPlugins(platform: PlatformInfo, options: { offline?: boolean; view?: RegistryView } = {}): Promise<PluginReport | undefined> {
   if (platform.id !== 'dsh' || !platform.profileDir) return undefined
   const pkg = readJson(join(platform.profileDir, 'package.json'))
   if (!pkg) return undefined
@@ -55,7 +58,8 @@ export async function checkPlugins(platform: PlatformInfo, options: { offline?: 
   }
   const checkedRegistry = !options.offline && plugins.length > 0
   if (checkedRegistry) {
-    await Promise.all(plugins.map((p) => (p.version ? registryCheck(p, host, platform.profileDir!) : Promise.resolve())))
+    const view = options.view ?? npmView
+    await Promise.all(plugins.map((p) => (p.version ? registryCheck(p, host, platform.profileDir!, view) : Promise.resolve())))
   }
   return { bundles, plugins, checkedRegistry }
 }
@@ -80,8 +84,8 @@ function isExempt(exemptions: any, name: string, version: string, host: string):
   return Array.isArray(entry) && entry.includes(host)
 }
 
-async function registryCheck(p: PluginInfo, host: string | undefined, cwd: string) {
-  const view = await npmView(p.name, cwd)
+async function registryCheck(p: PluginInfo, host: string | undefined, cwd: string, npmViewFn: RegistryView) {
+  const view = await npmViewFn(p.name, cwd)
   if (!view) {
     if (p.state === 'ok') p.state = 'unknown'
     return
@@ -101,7 +105,7 @@ async function registryCheck(p: PluginInfo, host: string | undefined, cwd: strin
   }
   p.latest = latest
   // `npm view <name>` describes the latest version's manifest already, but be explicit.
-  const latestMeta = view.version === latest ? view : await npmView(`${p.name}@${latest}`, cwd)
+  const latestMeta = view.version === latest ? view : await npmViewFn(`${p.name}@${latest}`, cwd)
   const unmet = host && latestMeta ? unmetHostRequirements(latestMeta, host) : []
   if (unmet.length) {
     p.reason = `${latest} 也不兼容当前 dsh（${unmet[0]}）`
@@ -111,7 +115,17 @@ async function registryCheck(p: PluginInfo, host: string | undefined, cwd: strin
   if (p.state === 'ok' || p.exempted) p.state = 'upgradable'
 }
 
+const NPM_NAME = /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/
+
+/** `npm` is a .cmd on Windows and needs a shell, so only ever pass it validated specs. */
+export function isSafeNpmSpec(spec: string): boolean {
+  const at = spec.lastIndexOf('@')
+  if (at <= 0) return NPM_NAME.test(spec)
+  return NPM_NAME.test(spec.slice(0, at)) && semver.valid(spec.slice(at + 1)) !== null
+}
+
 function npmView(name: string, cwd: string): Promise<any | undefined> {
+  if (!isSafeNpmSpec(name)) return Promise.resolve(undefined)
   return new Promise((resolve) => {
     execFile(
       process.platform === 'win32' ? 'npm.cmd' : 'npm',

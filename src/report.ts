@@ -46,8 +46,9 @@ export function renderCheck(r: CheckResult, options: { all?: boolean } = {}): st
   // Skills
   const counts = { ok: 0, update: 0, broken: 0, unchecked: 0 }
   for (const v of r.verdicts) counts[v.state]++
-  const extraBroken = r.orphanFindings.filter((f) => f.severity === 'critical' || f.severity === 'high')
-  const extraCount = extraBroken.reduce((n, f) => n + (f.code === 'nested' ? Math.max(1, f.detail?.length ?? 1) : f.code === 'unscanned-root' ? (f.detail?.length ?? 1) : 1), 0)
+  // One problem to fix = one count: a folder with 15 nested skills is one move, not 15 reviews.
+  // The finding's message carries how many skills are inside.
+  const extraCount = r.orphanFindings.filter((f) => f.severity === 'critical' || f.severity === 'high').length
   counts.broken += extraCount
   const total = r.verdicts.length + extraCount
   const bundled = r.verdicts.filter((v) => v.provenance.kind === 'bundled').length

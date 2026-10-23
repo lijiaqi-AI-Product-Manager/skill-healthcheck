@@ -8,7 +8,7 @@ import { nowMs } from './env.js'
 import type { JournalEvent } from './journal.js'
 import { c, checkJson, renderCheck, renderDetails, renderInventory, renderJournal, renderWhy } from './report.js'
 import { catalogTimeline, loadSessions } from './sessions.js'
-import { parseSourceSpec, SOURCES_FILE, type SourcesFile } from './upstream.js'
+import { isSafeGitUrl, matchRepoSkills, parseSourceSpec, resolveProvenance, SOURCES_FILE, UpstreamChecker, type SourcesFile } from './upstream.js'
 import { why } from './why.js'
 
 const HELP = `skill-healthcheck — 我装的技能现在还有用吗？没用的是哪个、从什么时候开始？
@@ -18,8 +18,10 @@ const HELP = `skill-healthcheck — 我装的技能现在还有用吗？没用�
   skill-healthcheck why "<现象>"     按时间线反查可疑技能，例如 why "不用中文回答了"
   skill-healthcheck log              看记录：装了什么、改了什么、什么时候
   skill-healthcheck ls               列出平台实际会加载的技能（含被遮蔽/被丢弃的）
+  skill-healthcheck adopt --repo <仓库>
+                                     批量登记：把本地技能和仓库里的技能按名字/内容对上，例如 --repo github:anthropics/skills
   skill-healthcheck adopt <name> <来源>
-                                     登记技能来源：github:owner/repo/path、GitHub 链接或 <git-url>#<path>
+                                     登记单个技能来源：github:owner/repo/path、GitHub 链接或 <git-url>#<path>
   skill-healthcheck record           只记录一次快照，不输出（给钩子/定时任务用）
 
 选项
@@ -48,6 +50,8 @@ async function main(argv: string[]): Promise<number> {
       profile: { type: 'string' },
       cwd: { type: 'string' },
       name: { type: 'string' },
+      repo: { type: 'string' },
+      force: { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },
       version: { type: 'boolean', short: 'v' },
     },
@@ -74,14 +78,17 @@ async function main(argv: string[]): Promise<number> {
 
   switch (command) {
     case 'check': {
-      const result = await runCheck(options)
+      const result = await runCheck({ ...options, onProgress: values.json ? undefined : progress })
       if (values.json) console.log(JSON.stringify(checkJson(result), null, 2))
       else {
         console.log(renderCheck(result, { all: values.all }))
         if (values.all) console.log(`\n${renderDetails(result)}`)
         if (result.newEvents.some((e) => e.kind === 'baseline')) console.log(c.dim(`已开始记录（${result.newEvents.length} 条）。以后每次运行都会记下变化。`))
       }
-      const bad = result.verdicts.some((v) => v.state === 'broken') || result.pluginFindings.some((f) => f.severity === 'critical')
+      const bad =
+        result.verdicts.some((v) => v.state === 'broken') ||
+        result.orphanFindings.some((f) => f.severity === 'critical' || f.severity === 'high') ||
+        result.pluginFindings.some((f) => f.severity === 'critical')
       return bad ? 1 : 0
     }
     case 'ls': {
@@ -110,10 +117,12 @@ async function main(argv: string[]): Promise<number> {
       return 0
     }
     case 'adopt': {
+      if (values.repo) return adoptRepo(values.repo, options, values.force === true)
       const [name, spec] = rest
-      if (!name || !spec) throw new UsageError('用法：skill-healthcheck adopt <name> <来源>')
+      if (!name || !spec) throw new UsageError('用法：skill-healthcheck adopt <name> <来源>  或  skill-healthcheck adopt --repo <仓库>')
       const parsed = parseSourceSpec(spec)
       if (!parsed) throw new UsageError(`看不懂的来源：${spec}`)
+      if (!isSafeGitUrl(parsed.url)) throw new UsageError(`不支持的来源地址：${parsed.url}`)
       const { store, inventory } = scanAndRecord(options)
       if (!inventory.active.some((s) => s.skill.name === name)) throw new UsageError(`没有找到生效中的技能 ${name}（skill-healthcheck ls 查看）`)
       const sources = store.readJsonFile<SourcesFile>(SOURCES_FILE) ?? {}
@@ -130,6 +139,46 @@ async function main(argv: string[]): Promise<number> {
     default:
       throw new UsageError(`未知命令：${command}\n\n${HELP}`)
   }
+}
+
+async function adoptRepo(spec: string, options: CheckOptions, force: boolean): Promise<number> {
+  const parsed = parseSourceSpec(spec)
+  if (!parsed || !isSafeGitUrl(parsed.url)) throw new UsageError(`不支持的来源地址：${spec}`)
+  const { store, platform, inventory } = scanAndRecord(options)
+  const sources = store.readJsonFile<SourcesFile>(SOURCES_FILE) ?? {}
+  // Only skills we can't already trace, unless --force.
+  const candidates = []
+  for (const s of inventory.active) {
+    if (s.root.bundled) continue
+    if (!force && (sources[s.skill.name] || (await resolveProvenance(s, platform, {})).kind === 'git')) continue
+    candidates.push(s)
+  }
+  if (candidates.length === 0) {
+    console.log('没有需要登记来源的技能（已有来源的用 --force 覆盖）。')
+    return 0
+  }
+  const checker = new UpstreamChecker(store, { onFetch: (url) => progress(`正在获取 ${url} …`) })
+  const result = await matchRepoSkills(checker, parsed, candidates)
+  progress('')
+  if (!result.ok) {
+    const r = result.result
+    throw new UsageError(`无法读取仓库：${'detail' in r ? r.detail : r.state}`)
+  }
+  for (const m of result.matches) {
+    sources[m.skill.skill.name] = { url: parsed.url, subpath: m.subpath, ref: parsed.ref, adoptedAt: nowMs() }
+    const how = m.by === 'name' ? '同名' : `内容相似 ${Math.round(m.score * 100)}%`
+    console.log(`已登记：${m.skill.skill.name.padEnd(24)} ← ${m.subpath || '/'}  ${c.dim(how)}`)
+  }
+  if (result.matches.length) store.writeJsonFile(SOURCES_FILE, sources)
+  const missed = candidates.length - result.matches.length
+  console.log(c.dim(`仓库里有 ${result.repoSkills} 个技能；登记 ${result.matches.length} 个${missed ? `，${missed} 个本地技能在这个仓库里没找到` : ''}。`))
+  return 0
+}
+
+/** One rewritable status line on stderr; silent when stderr isn't a terminal. */
+export function progress(text: string) {
+  if (!process.stderr.isTTY) return
+  process.stderr.write(`\r\x1b[2K${text ? c.dim(text) : ''}`)
 }
 
 class UsageError extends Error {}

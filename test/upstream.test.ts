@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { runCheck } from '../src/check.js'
 import { Store } from '../src/journal.js'
 import { parseSourceSpec } from '../src/upstream.js'
-import { gitRun, sandbox, skillMd, upstreamRepo } from './helpers.js'
+import { gitRun, sandbox, skillMd, upstreamRepo, write } from './helpers.js'
 
 const ZH = skillMd({ name: 'zh-writer', description: '中文写作助手：在用户要求写中文文章时使用' }, 'Write well.\n')
 
@@ -99,6 +99,48 @@ describe('upstream checks against a local bare repo', () => {
     const [v] = await check(s)
     expect(v!.upstream?.state).toBe('unreachable')
     expect(v!.state).toBe('unchecked')
+  })
+})
+
+describe('several skills from one repo', () => {
+  it('does not race when the same repo is registered with and without a ref', async () => {
+    const s = sandbox()
+    const store = new Store()
+    const up = upstreamRepo(s.root, { 'a/SKILL.md': skillMd({ name: 'a', description: 'A' }), 'b/SKILL.md': skillMd({ name: 'b', description: 'B' }) })
+    const checkout = join(s.root, 'checkout')
+    gitRun(s.root, 'clone', '-q', '-c', 'core.autocrlf=false', up.bare, checkout)
+    for (const n of ['a', 'b']) cpSync(join(checkout, n), join(s.DSH_HOME, 'skills', n), { recursive: true })
+    store.writeJsonFile('sources.json', { a: { url: up.bare, subpath: 'a', adoptedAt: 0 }, b: { url: up.bare, subpath: 'b', ref: 'main', adoptedAt: 0 } })
+    const verdicts = await check(s, store)
+    expect(verdicts.map((v) => [v.skill.skill.name, v.upstream?.state])).toEqual([
+      ['a', 'current'],
+      ['b', 'current'],
+    ])
+  })
+
+  it('adopt --repo matches copied folders by name and by content', async () => {
+    const s = sandbox()
+    const store = new Store()
+    const body = 'Line one of a long and specific instruction.\nLine two of it.\nLine three of it.\n'
+    const up = upstreamRepo(s.root, {
+      'skills/pdf/SKILL.md': skillMd({ name: 'pdf', description: 'PDF tools' }, body),
+      'skills/sheet/SKILL.md': skillMd({ name: 'sheet', description: 'Spreadsheets' }, `${body}Sheets only.\n`),
+      'skills/other/SKILL.md': skillMd({ name: 'other', description: 'Other' }, 'Unrelated.\n'),
+    })
+    const { buildInventory } = await import('../src/discover.js')
+    const { detectPlatform } = await import('../src/platforms.js')
+    const { matchRepoSkills, UpstreamChecker } = await import('../src/upstream.js')
+    // pdf copied as-is; "sheet" copied and renamed locally to my-sheet
+    write(join(s.DSH_HOME, 'skills', 'pdf', 'SKILL.md'), skillMd({ name: 'pdf', description: 'PDF tools' }, body))
+    write(join(s.DSH_HOME, 'skills', 'my-sheet', 'SKILL.md'), skillMd({ name: 'my-sheet', description: 'Spreadsheets' }, `${body}Sheets only.\n`))
+    write(join(s.DSH_HOME, 'skills', 'mine', 'SKILL.md'), skillMd({ name: 'mine', description: 'Hand written' }, 'Nothing like upstream.\n'))
+    const inv = buildInventory(detectPlatform({ cwd: s.project }))
+    const result = await matchRepoSkills(new UpstreamChecker(store), { url: up.bare, subpath: 'skills' }, inv.active)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.repoSkills).toBe(3)
+    const got = Object.fromEntries(result.matches.map((m) => [m.skill.skill.name, [m.subpath, m.by]]))
+    expect(got).toEqual({ pdf: ['skills/pdf', 'name'], 'my-sheet': ['skills/sheet', 'content'] })
   })
 })
 

@@ -4,7 +4,7 @@
 // (confirmed via the GitHub API for github.com) counts.
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, realpathSync } from 'node:fs'
-import { join, relative, resolve } from 'node:path'
+import { isAbsolute, join, relative, resolve } from 'node:path'
 import { parseSkillText, type ParseResult } from './frontmatter.js'
 import { git } from './git.js'
 import type { Store } from './journal.js'
@@ -100,37 +100,134 @@ interface FetchedRepo {
 
 type FetchOutcome = FetchedRepo | { ok: false; result: UpstreamResult }
 
-/** One fetch per repo per run, shared across the skills that come from it. */
+/**
+ * Upstream URLs can come from a third-party SKILL.md (metadata.source), so treat them as
+ * hostile: no option-looking values (git would run `--upload-pack=<cmd>`), no transport
+ * helpers like `ext::`, only network URLs, scp-style ssh, or absolute local paths.
+ */
+export function isSafeGitUrl(url: string): boolean {
+  if (!url || url.startsWith('-') || /[\0\r\n]/.test(url)) return false
+  if (/^[a-z][a-z0-9+.-]*::/i.test(url)) return false
+  if (/^(https?|ssh|git|file):\/\/[^\s]+$/i.test(url)) return !/^file:\/\/-/i.test(url)
+  if (/^[\w.-]+@[\w.-]+:[^\s]+$/.test(url)) return true
+  return isAbsolute(url)
+}
+
+export function isSafeRef(ref: string): boolean {
+  return /^[\w][\w./-]*$/.test(ref) && !ref.includes('..')
+}
+
+/** One fetch per repo+ref per run, shared across the skills that come from it. */
 export class UpstreamChecker {
   private fetches = new Map<string, Promise<FetchOutcome>>()
-  constructor(private store: Store, private options: { offline?: boolean } = {}) {}
+  /** Per cache repo: git takes locks, so fetches into the same repo must not overlap. */
+  private queues = new Map<string, Promise<unknown>>()
+  constructor(
+    private store: Store,
+    private options: { offline?: boolean; onFetch?: (url: string) => void } = {},
+  ) {}
 
   async check(skill: InstalledSkill, prov: Extract<Provenance, { kind: 'git' }>): Promise<UpstreamResult> {
     if (this.options.offline) return { state: 'unreachable', detail: '离线模式，未检查' }
-    const key = `${prov.url}@${prov.ref ?? 'HEAD'}`
-    let fetching = this.fetches.get(key)
-    if (!fetching) {
-      fetching = this.fetch(prov.url, prov.ref)
-      this.fetches.set(key, fetching)
-    }
-    const repo = await fetching
+    const repo = await this.fetchRepo(prov.url, prov.ref)
     if (!repo.ok) return repo.result
     return compareSkill(repo, skill, prov)
   }
 
+  /** Fetch a repo into the cache (shared with check()). */
+  async fetchRepo(url: string, ref?: string): Promise<FetchOutcome> {
+    if (!isSafeGitUrl(url) || (ref !== undefined && !isSafeRef(ref))) {
+      return { ok: false, result: { state: 'unreachable', detail: `拒绝使用可疑的来源地址：${url.slice(0, 80)}` } }
+    }
+    const key = `${url}@${ref ?? 'HEAD'}`
+    let fetching = this.fetches.get(key)
+    if (!fetching) {
+      fetching = this.serialized(cacheDirFor(this.store, url), () => this.fetch(url, ref))
+      this.fetches.set(key, fetching)
+    }
+    return fetching
+  }
+
+  private serialized<T>(gitDir: string, task: () => Promise<T>): Promise<T> {
+    const prev = this.queues.get(gitDir) ?? Promise.resolve()
+    const next = prev.then(task, task)
+    this.queues.set(gitDir, next.catch(() => undefined))
+    return next
+  }
+
   private async fetch(url: string, ref?: string): Promise<FetchOutcome> {
-    const gitDir = join(this.store.dir, 'cache', `${createHash('sha1').update(url).digest('hex').slice(0, 16)}.git`)
+    const gitDir = cacheDirFor(this.store, url)
     if (!existsSync(gitDir)) {
       mkdirSync(join(this.store.dir, 'cache'), { recursive: true })
       const init = await git(['init', '--bare', '--quiet', gitDir])
       if (!init.ok) return { ok: false, result: { state: 'unreachable', detail: firstLine(init.stderr) } }
     }
-    const fetched = await git(['--git-dir', gitDir, 'fetch', '--quiet', '--no-tags', '--filter=blob:none', url, ref ?? 'HEAD'], { timeoutMs: 120_000 })
+    this.options.onFetch?.(url)
+    // Fetch into our own ref rather than FETCH_HEAD, which the next fetch would overwrite.
+    const local = `refs/shc/${createHash('sha1').update(ref ?? 'HEAD').digest('hex').slice(0, 12)}`
+    const fetched = await git(
+      ['--git-dir', gitDir, 'fetch', '--quiet', '--no-tags', '--filter=blob:none', '--end-of-options', url, `+${ref ?? 'HEAD'}:${local}`],
+      { timeoutMs: 120_000 },
+    )
     if (!fetched.ok) return { ok: false, result: await classifyFetchFailure(url, fetched.stderr) }
-    const head = await git(['--git-dir', gitDir, 'rev-parse', 'FETCH_HEAD'])
+    const head = await git(['--git-dir', gitDir, 'rev-parse', '--verify', `${local}^{commit}`])
     if (!head.ok) return { ok: false, result: { state: 'unreachable', detail: firstLine(head.stderr) } }
     return { ok: true, gitDir, commit: head.stdout.trim() }
   }
+}
+
+export interface RepoMatch {
+  skill: InstalledSkill
+  subpath: string
+  by: 'name' | 'content'
+  score: number
+}
+
+/**
+ * Bulk adopt: match local skills against every SKILL.md in a repo, by frontmatter name
+ * first and by content similarity otherwise. Most people copy skill folders out of a
+ * repo, which leaves no .git behind; this restores their provenance in one step.
+ */
+export async function matchRepoSkills(
+  checker: UpstreamChecker,
+  spec: { url: string; subpath: string; ref?: string },
+  skills: InstalledSkill[],
+): Promise<{ ok: true; matches: RepoMatch[]; repoSkills: number } | { ok: false; result: UpstreamResult }> {
+  const repo = await checker.fetchRepo(spec.url, spec.ref)
+  if (!repo.ok) return repo
+  const tree = await git(['--git-dir', repo.gitDir, 'ls-tree', '-r', '--name-only', repo.commit], { timeoutMs: 60_000 })
+  const prefix = spec.subpath ? `${spec.subpath}/` : ''
+  const files = tree.stdout
+    .split('\n')
+    .filter((p) => (p === 'SKILL.md' || p.endsWith('/SKILL.md')) && p.startsWith(prefix))
+    .slice(0, 2000)
+  if (files.length === 0) return { ok: true, matches: [], repoSkills: 0 }
+  const batch = await git(['--git-dir', repo.gitDir, 'cat-file', '--batch'], { input: files.map((p) => `${repo.commit}:${p}`).join('\n') + '\n', timeoutMs: 300_000 })
+  const blobs = splitCatFileBatch(batch.stdout)
+  const upstream = files.map((file, i) => {
+    const raw = blobs[i] ?? ''
+    const parsed = parseSkillText(raw)
+    return { subpath: file === 'SKILL.md' ? '' : file.slice(0, -'/SKILL.md'.length), raw, name: parsed.ok ? parsed.skill.name : undefined }
+  })
+  const matches: RepoMatch[] = []
+  for (const skill of skills) {
+    if (skill.kind !== 'bundle') continue
+    const sameName = upstream.filter((u) => u.name === skill.skill.name)
+    const pool = sameName.length ? sameName : upstream
+    let best: { subpath: string; score: number } | undefined
+    for (const u of pool) {
+      const score = similarity(u.raw, skill.raw)
+      if (!best || score > best.score) best = { subpath: u.subpath, score }
+    }
+    if (!best) continue
+    if (sameName.length) matches.push({ skill, subpath: best.subpath, by: 'name', score: best.score })
+    else if (best.score >= 0.6) matches.push({ skill, subpath: best.subpath, by: 'content', score: best.score })
+  }
+  return { ok: true, matches, repoSkills: files.length }
+}
+
+function cacheDirFor(store: Store, url: string): string {
+  return join(store.dir, 'cache', `${createHash('sha1').update(url).digest('hex').slice(0, 16)}.git`)
 }
 
 async function compareSkill(repo: FetchedRepo, skill: InstalledSkill, prov: Extract<Provenance, { kind: 'git' }>): Promise<UpstreamResult> {
