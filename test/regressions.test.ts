@@ -168,8 +168,23 @@ describe('why symptom matching', () => {
   })
 })
 
-describe('--json contract', () => {
-  it('carries a schema version and the plugin findings documented in findings.md', () => {
+describe('read-only data directory', () => {
+  it('still reports the check when the journal cannot be written', async () => {
+    const s = sandbox()
+    write(join(s.DSH_HOME, 'skills', 'a', 'SKILL.md'), skillMd({ name: 'a', description: 'x' }))
+    write(join(s.root, 'blocker'), 'not a directory')
+    process.env.SKILL_HEALTHCHECK_HOME = join(s.root, 'blocker', 'sub')
+    try {
+      const result = await runCheck({ platform: 'dsh', cwd: s.project, sessions: false })
+      expect(result.verdicts.map((v) => v.skill.skill.name)).toEqual(['a'])
+      expect(result.journalError).toBeTruthy()
+    } finally {
+      process.env.SKILL_HEALTHCHECK_HOME = s.SKILL_HEALTHCHECK_HOME
+    }
+  })
+})
+
+describe('--json contract', () => {  it('carries a schema version and the plugin findings documented in findings.md', () => {
     const json = checkJson({
       platform: { id: 'dsh', label: 'dsh', cwd: '/', projectRoot: '/', roots: [], unscannedRoots: [], host: { name: 'dsh', ok: true }, sessionSources: [] },
       inventory: { active: [], shadowed: [], dropped: [], nested: [], unscanned: [] },

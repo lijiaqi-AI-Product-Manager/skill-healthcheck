@@ -112,7 +112,14 @@ export function loadSessions(sources: SessionSource[] | string | undefined, stor
       out.push(summary)
     }
   }
-  if (store && (dirty || Object.keys(cache.files).length !== Object.keys(next.files).length)) store.writeJsonFile(CACHE_NAME, next)
+  if (store && (dirty || Object.keys(cache.files).length !== Object.keys(next.files).length)) {
+    // The cache is an optimization; a read-only data directory must not fail the check.
+    try {
+      store.writeJsonFile(CACHE_NAME, next)
+    } catch {
+      // next run re-parses: slower, still correct
+    }
+  }
   return out.sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0))
 }
 

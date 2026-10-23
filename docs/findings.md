@@ -32,6 +32,7 @@ Every finding in `skill-healthcheck --json` has a stable `code`, a `severity` (`
 - `schemaVersion` changes only when this shape breaks; fields are only ever added within a major value.
 - `other` holds findings about things that are not an active skill (`dropped`, `shadowed`, `nested`, `unscanned-root`).
 - `pluginFindings` carries the plugin codes below; `plugins` carries the per-plugin inventory.
+- `journalError` appears only when the data directory could not be written; the check still ran.
 - `skills[].upstream` is present only when provenance is a git URL; `state` is one of `current`, `changed`, `removed-in-repo`, `repo-missing`, `repo-moved`, `unreachable`.
 - `provenance.url` has any `user:token@` part redacted.
 

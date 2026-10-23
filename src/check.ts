@@ -33,6 +33,8 @@ export interface CheckResult {
   pluginFindings: Finding[]
   sessions: SessionSummary[]
   timeline: CatalogTimeline
+  /** Present when the journal could not be written (read-only home); the check still ran. */
+  journalError?: string
   /** Present when --explain was asked for. */
   explain?: ExplainStatus
 }
@@ -105,7 +107,19 @@ export async function runCheck(options: CheckOptions = {}): Promise<CheckResult>
   const plugins = await checkPlugins(platform, { offline: options.offline })
   const explain = options.explain && !options.offline ? await explainVerdicts(verdicts, options, store) : undefined
   options.onProgress?.('')
-  return { platform, inventory, newEvents, verdicts, orphanFindings, plugins, pluginFindings: pluginFindings(plugins), sessions, timeline, explain }
+  return {
+    platform,
+    inventory,
+    newEvents,
+    verdicts,
+    orphanFindings,
+    plugins,
+    pluginFindings: pluginFindings(plugins),
+    sessions,
+    timeline,
+    ...(store.writeError ? { journalError: store.writeError } : {}),
+    explain,
+  }
 }
 
 /** Finding codes worth a plain-language sentence: the ones that change whether or how a skill runs. */

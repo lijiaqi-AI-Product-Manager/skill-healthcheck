@@ -43,9 +43,12 @@ with a dot in the name.
   previously missing from the output). `docs/findings.md` now ships in the tarball.
 - Exit code `3` for an internal failure; `2` stays "usage error". All eight READMEs, `--help`
   and `docs/findings.md` document it.
-- `@anthropic-ai/sdk` moved to `optionalDependencies`: `--explain` loads it lazily and most
-  users never need it, but it was 20 MB of every install.
+- `@anthropic-ai/sdk` moved to `optionalDependencies`: `--explain` already loaded it lazily, and
+  `npm install --omit=optional` now skips it entirely. A plain install still includes it,
+  because npm installs optional dependencies by default.
 - The journal directory is created `0700` and its files `0600`.
+- A read-only data directory no longer turns into exit 3: the check prints its findings with
+  a warning line, `--json` gains `journalError`, and the exit code still reflects the result.
 - One `git rev-parse` per checkout instead of one per skill, and a single pass over session
   calls instead of one per skill.
 - CI now pins Node 22.19.0 (the declared minimum) and runs a Node 22.13.1 job that asserts the

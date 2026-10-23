@@ -68,6 +68,8 @@ export interface JournalEvent {
 
 export class Store {
   readonly dir: string
+  /** Set when the journal could not be written (read-only home, full disk); reads still work. */
+  writeError?: string
   constructor(dir = dataHome()) {
     this.dir = dir
   }
@@ -293,19 +295,26 @@ export function partitionKey(source: string, projectRoot: string): string {
 
 /** Snapshot the inventory, append the diff to the journal, return the new events. */
 export function record(inventory: Inventory, store = new Store(), origin: JournalEvent['origin'] = 'scan'): JournalEvent[] {
-  const cur = snapshotOf(inventory, store)
-  const projectKey = partitionKey('project-', inventory.platform.projectRoot)
   const events: JournalEvent[] = []
-  for (const key of ['user', projectKey]) {
-    const skills = Object.fromEntries(Object.entries(cur.skills).filter(([, s]) => partitionKey(s.source, inventory.platform.projectRoot) === key))
-    const part: Snapshot = { ...cur, skills }
-    const prev = store.readPartition(key)
-    // Nothing recorded for this project yet and nothing here: don't create empty partitions.
-    if (!prev && key !== 'user' && Object.keys(skills).length === 0) continue
-    events.push(...diffSnapshots(prev, part, origin))
-    store.writePartition(key, part)
+  try {
+    const cur = snapshotOf(inventory, store)
+    const projectKey = partitionKey('project-', inventory.platform.projectRoot)
+    for (const key of ['user', projectKey]) {
+      const skills = Object.fromEntries(Object.entries(cur.skills).filter(([, s]) => partitionKey(s.source, inventory.platform.projectRoot) === key))
+      const part: Snapshot = { ...cur, skills }
+      const prev = store.readPartition(key)
+      // Nothing recorded for this project yet and nothing here: don't create empty partitions.
+      if (!prev && key !== 'user' && Object.keys(skills).length === 0) continue
+      events.push(...diffSnapshots(prev, part, origin))
+      store.writePartition(key, part)
+    }
+    store.append(events.sort((a, b) => a.t - b.t))
+  } catch (error) {
+    // A health check must still report when it cannot write its own history (a read-only
+    // HOME in CI, for example). The caller shows the failure instead of exiting 3.
+    store.writeError ??= String(error instanceof Error ? error.message : error)
+    return []
   }
-  store.append(events.sort((a, b) => a.t - b.t))
   return events
 }
 

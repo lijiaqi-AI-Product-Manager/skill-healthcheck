@@ -101,6 +101,7 @@ export function renderCheck(r: CheckResult, options: { all?: boolean } = {}): st
 
   const unknown = r.verdicts.filter((v) => v.provenance.kind === 'unknown').length
   const footer: string[] = []
+  if (r.journalError) footer.push(c.yellow(t('r.journalOff', r.journalError)))
   if (unknown) footer.push(c.dim(t('r.unknownSources', unknown)))
   if (r.explain) footer.push(c.dim(r.explain.used ? t('explain.via', r.explain.provider, r.explain.model) : t('explain.none')))
   footer.push(conclusion(upgradable, counts.update + counts.broken))
@@ -193,6 +194,7 @@ export function checkJson(r: CheckResult) {
     other: r.orphanFindings,
     pluginFindings: r.pluginFindings,
     recorded: r.newEvents.length,
+    ...(r.journalError ? { journalError: r.journalError } : {}),
     ...(r.explain ? { explain: r.explain } : {}),
   }
 }
