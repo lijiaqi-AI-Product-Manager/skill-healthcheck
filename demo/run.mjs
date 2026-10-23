@@ -94,19 +94,29 @@ for (let d = 14; d >= 0; d--) {
 
 // --- the show ---
 const pause = (ms) => fast || Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
+const lang = process.argv.includes('--lang') && process.argv[process.argv.indexOf('--lang') + 1] === 'zh' ? 'zh' : 'en'
+const narration = {
+  en: [
+    'First checkup: two skills installed, all green, the journal starts recording',
+    "A few days later the zh-writer author rewrites its description (you haven't pulled yet)",
+    'Separately: the agent stopped answering in Chinese. Why?',
+    'stopped replying in Chinese',
+  ],
+  zh: ['第一次体检：装了两个技能，一切正常，记录器开始记录', '几天后，zh-writer 的上游作者改了 description（你还没有 pull）', '另一件事：agent 最近不用中文回答了，为什么？', '为什么它现在不用中文回答我了'],
+}[lang]
 const say = (text) => console.log(`\n\x1b[2m# ${text}\x1b[0m`)
 const run = (...args) => {
-  console.log(`\x1b[1m$ skill-healthcheck --lang en ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}\x1b[0m`)
-  spawnSync(process.execPath, [cli, '--lang', 'en', ...args], { cwd: project, env, stdio: 'inherit' })
+  console.log(`\x1b[1m$ skill-healthcheck ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}\x1b[0m`)
+  spawnSync(process.execPath, [cli, '--lang', lang, ...args], { cwd: project, env, stdio: 'inherit' })
 }
 
-say('First checkup: two skills installed, all green, the journal starts recording')
+say(narration[0])
 run()
 pause(1500)
-say("A few days later the zh-writer author rewrites its description (you haven't pulled yet)")
+say(narration[1])
 zh.commit({ 'SKILL.md': skill('zh-writer', 'Writing assistant for blog posts and marketing copy. Keep a professional tone.', '# Writing\n\nKeep the user\'s voice.') }, 'generalize description')
 pause(800)
 run()
 pause(2000)
-say("Separately: the agent stopped answering in Chinese. Why?")
-run('why', 'stopped replying in Chinese')
+say(narration[2])
+run('why', narration[3])

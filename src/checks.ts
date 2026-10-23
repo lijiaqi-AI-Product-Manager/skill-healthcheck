@@ -2,6 +2,7 @@
 // error, detectable offline from disk and session logs.
 import { relative } from 'node:path'
 import { catalogDescription } from './frontmatter.js'
+import { t } from './i18n.js'
 import { localDay, usageStats, type CatalogTimeline, type SessionSummary } from './sessions.js'
 import type { Finding, Inventory } from './types.js'
 
@@ -9,31 +10,30 @@ const DAY = 86_400_000
 
 export function localFindings(inv: Inventory): Finding[] {
   const out: Finding[] = []
-  const isDsh = inv.platform.id === 'dsh'
+  const who = inv.platform.id === 'dsh' ? t('local.dropper.dsh') : t('local.dropper.agent')
   for (const entry of inv.dropped) {
     if (!entry.parse.ok) {
       const name = entry.parse.rawName ?? entry.entryName.replace(/\.md$/, '')
       // A flat README.md without frontmatter is noise, not a broken skill.
       const severity = entry.kind === 'flat' && entry.parse.code === 'missing-frontmatter' ? 'info' : 'critical'
-      out.push({
-        code: 'dropped',
-        severity,
-        subject: name,
-        message: `${isDsh ? 'dsh' : 'agent'} 会静默丢弃它：${entry.parse.reason}`,
-        detail: [entry.file],
-        area: 'local',
-      })
+      out.push({ code: 'dropped', severity, subject: name, message: t('local.dropped', who, entry.parse.reason), detail: [entry.file], area: 'local' })
     }
   }
   for (const s of inv.shadowed) {
     const winner = s.shadowedBy!
     const same = winner.raw === s.raw
+    // dsh's precedence is documented and mirrored exactly; other agents' isn't, so only say "conflict".
+    const message = same
+      ? t('local.shadowedSame', winner.root.source)
+      : s.root.agent
+        ? t('local.conflict', winner.root.source, s.root.agent)
+        : t('local.shadowed', winner.root.source)
     out.push({
       code: 'shadowed',
       severity: same ? 'info' : 'high',
       subject: s.skill.name,
-      message: same ? `与 ${winner.root.source} 中的同名副本重复（内容相同）` : `被 ${winner.root.source} 里的同名技能遮蔽，这份永远不会生效`,
-      detail: [`生效：${winner.file}`, `被遮蔽：${s.file}`],
+      message,
+      detail: [t('local.active', winner.file), t('local.loser', s.file)],
       area: 'local',
     })
   }
@@ -42,7 +42,7 @@ export function localFindings(inv: Inventory): Finding[] {
       code: 'nested',
       severity: 'high',
       subject: relative(n.root.path, n.dir) || n.dir,
-      message: `目录里有 ${n.found.length} 个技能嵌套太深，只认 <根>/<名>/SKILL.md`,
+      message: t('local.nested', n.found.length),
       detail: n.found.slice(0, 5).map((f) => `${n.dir}/${f}`.replaceAll('\\', '/')),
       area: 'local',
     })
@@ -52,7 +52,7 @@ export function localFindings(inv: Inventory): Finding[] {
       code: 'unscanned-root',
       severity: 'high',
       subject: u.root.path,
-      message: `${u.root.why}，这里的 ${u.entries.length} 个技能都不会加载`,
+      message: t('local.unscanned', u.root.label, u.entries.length),
       detail: u.entries.slice(0, 5).map((e) => (e.parse.ok ? e.parse.skill.name : e.entryName)),
       area: 'local',
     })
@@ -65,19 +65,13 @@ export function localFindings(inv: Inventory): Finding[] {
         code: 'description-truncated',
         severity: 'medium',
         subject: s.skill.name,
-        message: `description 超过 ${max} 字符，目录里被截断，结尾的触发词模型看不到`,
-        detail: [`显示到：…${shown.slice(-60)}`],
+        message: t('local.truncated', max),
+        detail: [t('local.shownTo', shown.slice(-60))],
         area: 'local',
       })
     }
     if (!s.skill.invocation.modelInvocable) {
-      out.push({
-        code: 'model-invocation-disabled',
-        severity: 'info',
-        subject: s.skill.name,
-        message: `disable-model-invocation: true，只能手动 /${s.skill.name}`,
-        area: 'local',
-      })
+      out.push({ code: 'model-invocation-disabled', severity: 'info', subject: s.skill.name, message: t('local.manualOnly', s.skill.name), area: 'local' })
     }
   }
   return out
@@ -94,15 +88,13 @@ export function usageFindings(inv: Inventory, sessions: SessionSummary[], timeli
     const usage = usageStats(sessions, s.skill.name)
     if (usage.calls < 2 || usage.lastCall === undefined || usage.quietSessions < 3) continue
     const change = timeline.changes.filter((c) => c.name === s.skill.name && c.t <= usage.lastCall! + 14 * DAY && c.t >= usage.lastCall! - DAY).at(-1)
-    const detail = [`最后一次调用：${localDay(usage.lastCall)}，之后 ${usage.quietSessions} 个会话目录里都有它却没用过`]
-    if (change) detail.push(`${localDay(change.t)} 模型看到的 description 变了`)
+    const detail = [t('usage.lastCall', localDay(usage.lastCall), usage.quietSessions)]
+    if (change) detail.push(t('usage.descChangedOn', localDay(change.t)))
     out.push({
       code: 'went-quiet',
       severity: change ? 'critical' : 'high',
       subject: s.skill.name,
-      message: change
-        ? `调用 ${usage.calls} 次后，自 ${localDay(change.t)} description 改动起 0 次`
-        : `曾被调用 ${usage.calls} 次，${localDay(usage.lastCall)} 后再没被用过`,
+      message: change ? t('usage.quietAfterChange', usage.calls, localDay(change.t)) : t('usage.quiet', usage.calls, localDay(usage.lastCall)),
       detail,
       area: 'usage',
     })

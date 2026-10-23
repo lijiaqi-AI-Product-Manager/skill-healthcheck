@@ -2,10 +2,11 @@
 // snapshot and appends what changed to an append-only journal. Full SKILL.md texts go
 // into a content-addressed blob store so later diffs (and `why`) can see old versions.
 import { createHash } from 'node:crypto'
-import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { listScripts } from './discover.js'
 import { dataHome, nowMs } from './env.js'
+import { t } from './i18n.js'
 import type { Inventory, SkillEntry } from './types.js'
 
 export interface SkillState {
@@ -83,13 +84,27 @@ export class Store {
     mkdirSync(join(this.dir, 'blobs'), { recursive: true })
   }
 
-  readSnapshot(): Snapshot | undefined {
-    return readJson<Snapshot>(this.snapshotFile)
+  private partitionFile(key: string) {
+    return key === 'user' ? this.snapshotFile : join(this.dir, 'snapshots', `${createHash('sha1').update(key).digest('hex').slice(0, 16)}.json`)
   }
 
-  writeSnapshot(snapshot: Snapshot) {
-    this.ensure()
-    writeFileSync(this.snapshotFile, JSON.stringify(snapshot, null, 1))
+  readPartition(key: string): Snapshot | undefined {
+    const snap = readJson<Snapshot>(this.partitionFile(key))
+    if (snap || key === 'user') {
+      // Before partitions existed, snapshot.json held project skills too; keep those out of "user".
+      if (snap && key === 'user') snap.skills = Object.fromEntries(Object.entries(snap.skills).filter(([, s]) => !s.source.startsWith('project-')))
+      return snap
+    }
+    // First partitioned run for this project: seed from the legacy combined snapshot.
+    const legacy = readJson<Snapshot>(this.snapshotFile)
+    if (!legacy) return undefined
+    const root = key.slice('project:'.length)
+    const skills = Object.fromEntries(Object.entries(legacy.skills).filter(([k, s]) => s.source.startsWith('project-') && k.replaceAll('\\', '/').toLowerCase().startsWith(root)))
+    return Object.keys(skills).length ? { ...legacy, skills } : undefined
+  }
+
+  writePartition(key: string, snapshot: Snapshot) {
+    writeAtomic(this.partitionFile(key), JSON.stringify(snapshot, null, 1))
   }
 
   append(events: JournalEvent[]) {
@@ -115,10 +130,7 @@ export class Store {
   putBlob(text: string): string {
     const sha = sha256(text)
     const file = join(this.dir, 'blobs', `${sha}.md`)
-    if (!existsSync(file)) {
-      this.ensure()
-      writeFileSync(file, text)
-    }
+    if (!existsSync(file)) writeAtomic(file, text)
     return sha
   }
 
@@ -135,8 +147,23 @@ export class Store {
   }
 
   writeJsonFile(name: string, value: unknown) {
-    this.ensure()
-    writeFileSync(join(this.dir, name), JSON.stringify(value, null, 1))
+    writeAtomic(join(this.dir, name), JSON.stringify(value, null, 1))
+  }
+}
+
+/**
+ * The CLI and the dsh plugin can run at the same time; write to a temp file and rename
+ * over the target so a reader never sees half a JSON document.
+ */
+function writeAtomic(file: string, content: string) {
+  mkdirSync(dirname(file), { recursive: true })
+  const tmp = `${file}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`
+  writeFileSync(tmp, content)
+  try {
+    renameSync(tmp, file)
+  } catch (error) {
+    rmSync(tmp, { force: true })
+    throw error
   }
 }
 
@@ -195,7 +222,7 @@ export function diffSnapshots(prev: Snapshot | undefined, cur: Snapshot, origin:
   })
   if (!prev) {
     for (const s of Object.values(cur.skills)) {
-      events.push({ ...base('baseline', s, Math.min(s.fileTime, now), true), after: s, note: '首次记录时已存在，时间取自文件时间' })
+      events.push({ ...base('baseline', s, Math.min(s.fileTime, now), true), after: s, note: t('journal.baselineNote') })
     }
     return events.sort((a, b) => a.t - b.t)
   }
@@ -216,7 +243,7 @@ export function diffSnapshots(prev: Snapshot | undefined, cur: Snapshot, origin:
   for (const key of removedKeys) {
     if (movedFrom.has(key)) continue
     const before = prev.skills[key]!
-    events.push({ ...base('removed', before, now, true), before, note: '删除时间介于上次记录和本次之间' })
+    events.push({ ...base('removed', before, now, true), before, note: t('journal.removedNote') })
   }
   const movedTargets = new Set(movedFrom.values())
   for (const key of addedKeys) {
@@ -254,13 +281,30 @@ export function diffStates(before: SkillState, after: SkillState): StateDiff {
   return diff
 }
 
+/**
+ * Project-level skills depend on where you run from, so each project root gets its own
+ * snapshot partition; user-level roots share one. Otherwise running in project B would
+ * "remove" every project skill seen in project A.
+ */
+export function partitionKey(source: string, projectRoot: string): string {
+  return source.startsWith('project-') ? `project:${projectRoot.replaceAll('\\', '/').toLowerCase()}` : 'user'
+}
+
 /** Snapshot the inventory, append the diff to the journal, return the new events. */
 export function record(inventory: Inventory, store = new Store(), origin: JournalEvent['origin'] = 'scan'): JournalEvent[] {
-  const prev = store.readSnapshot()
   const cur = snapshotOf(inventory, store)
-  const events = diffSnapshots(prev, cur, origin)
-  store.append(events)
-  store.writeSnapshot(cur)
+  const projectKey = partitionKey('project-', inventory.platform.projectRoot)
+  const events: JournalEvent[] = []
+  for (const key of ['user', projectKey]) {
+    const skills = Object.fromEntries(Object.entries(cur.skills).filter(([, s]) => partitionKey(s.source, inventory.platform.projectRoot) === key))
+    const part: Snapshot = { ...cur, skills }
+    const prev = store.readPartition(key)
+    // Nothing recorded for this project yet and nothing here: don't create empty partitions.
+    if (!prev && key !== 'user' && Object.keys(skills).length === 0) continue
+    events.push(...diffSnapshots(prev, part, origin))
+    store.writePartition(key, part)
+  }
+  store.append(events.sort((a, b) => a.t - b.t))
   return events
 }
 

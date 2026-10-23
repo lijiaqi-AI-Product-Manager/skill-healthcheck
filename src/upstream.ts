@@ -7,6 +7,7 @@ import { existsSync, mkdirSync, realpathSync } from 'node:fs'
 import { isAbsolute, join, relative, resolve } from 'node:path'
 import { parseSkillText, type ParseResult } from './frontmatter.js'
 import { git } from './git.js'
+import { t } from './i18n.js'
 import type { Store } from './journal.js'
 import type { InstalledSkill, PlatformInfo } from './types.js'
 
@@ -128,7 +129,7 @@ export class UpstreamChecker {
   ) {}
 
   async check(skill: InstalledSkill, prov: Extract<Provenance, { kind: 'git' }>): Promise<UpstreamResult> {
-    if (this.options.offline) return { state: 'unreachable', detail: '离线模式，未检查' }
+    if (this.options.offline) return { state: 'unreachable', detail: t('up.offline') }
     const repo = await this.fetchRepo(prov.url, prov.ref)
     if (!repo.ok) return repo.result
     return compareSkill(repo, skill, prov)
@@ -137,7 +138,7 @@ export class UpstreamChecker {
   /** Fetch a repo into the cache (shared with check()). */
   async fetchRepo(url: string, ref?: string): Promise<FetchOutcome> {
     if (!isSafeGitUrl(url) || (ref !== undefined && !isSafeRef(ref))) {
-      return { ok: false, result: { state: 'unreachable', detail: `拒绝使用可疑的来源地址：${url.slice(0, 80)}` } }
+      return { ok: false, result: { state: 'unreachable', detail: t('up.suspicious', url.slice(0, 80)) } }
     }
     const key = `${url}@${ref ?? 'HEAD'}`
     let fetching = this.fetches.get(key)
@@ -381,10 +382,10 @@ async function classifyFetchFailure(url: string, stderr: string): Promise<Upstre
   const authOrMissing = /could not read Username|Authentication failed|terminal prompts disabled|Permission denied|403/i.test(stderr)
   if (gh && (notFound || authOrMissing)) {
     const api = await githubRepoStatus(gh[1]!, gh[2]!)
-    if (api.state === 'missing') return { state: 'repo-missing', detail: 'GitHub 返回 404（已删除或已转为私有）' }
+    if (api.state === 'missing') return { state: 'repo-missing', detail: t('up.gh404') }
     if (api.state === 'moved') return { state: 'repo-moved', newUrl: api.newUrl }
     if (api.state === 'exists') return { state: 'unreachable', detail }
-    return { state: 'unreachable', detail: `${detail}；GitHub API 也无法确认` }
+    return { state: 'unreachable', detail: t('up.ghUnknown', detail) }
   }
   if (notFound && !/Could not resolve host|timed out|Connection refused|unable to access/i.test(stderr)) {
     return { state: 'repo-missing', detail }

@@ -50,6 +50,39 @@ describe('diffSnapshots', () => {
   })
 })
 
+describe('record across projects', () => {
+  it('keeps project skills of one project from looking deleted when run in another', async () => {
+    const s = sandbox()
+    const { mkdirSync } = await import('node:fs')
+    const other = join(s.root, 'other-project')
+    mkdirSync(join(other, '.git'), { recursive: true })
+    write(join(s.project, '.agents', 'skills', 'proj-a', 'SKILL.md'), skillMd({ name: 'proj-a', description: 'a' }))
+    write(join(s.DSH_HOME, 'skills', 'global', 'SKILL.md'), skillMd({ name: 'global', description: 'g' }))
+    const store = new Store()
+    record(buildInventory(detectPlatform({ cwd: s.project })), store)
+    expect(record(buildInventory(detectPlatform({ cwd: other })), store)).toEqual([])
+    expect(record(buildInventory(detectPlatform({ cwd: s.project })), store)).toEqual([])
+    // a real removal inside the project is still caught
+    const { rmSync } = await import('node:fs')
+    rmSync(join(s.project, '.agents', 'skills', 'proj-a'), { recursive: true })
+    expect(record(buildInventory(detectPlatform({ cwd: s.project })), store).map((e) => [e.kind, e.name])).toEqual([['removed', 'proj-a']])
+  })
+})
+
+describe('record from a folder without .git', () => {
+  it('files user skills under the same partition whether run from home or from a project', async () => {
+    const s = sandbox()
+    write(join(s.DSH_HOME, 'skills', 'global', 'SKILL.md'), skillMd({ name: 'global', description: 'g' }))
+    const store = new Store()
+    // home has no .git, so the project root is home and ~/.dsh/skills is listed twice
+    const fromHome = buildInventory(detectPlatform({ cwd: s.home }))
+    expect(fromHome.active.map((a) => [a.skill.name, a.root.source])).toEqual([['global', 'user-dsh']])
+    record(fromHome, store)
+    expect(record(buildInventory(detectPlatform({ cwd: s.project })), store)).toEqual([])
+    expect(record(buildInventory(detectPlatform({ cwd: s.home })), store)).toEqual([])
+  })
+})
+
 describe('record', () => {
   it('appends only what changed and keeps old versions in the blob store', () => {
     const s = sandbox()

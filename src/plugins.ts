@@ -4,6 +4,7 @@ import { execFile } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import semver from 'semver'
+import { t } from './i18n.js'
 import type { Finding, PlatformInfo } from './types.js'
 
 export interface PluginInfo {
@@ -42,16 +43,16 @@ export async function checkPlugins(platform: PlatformInfo, options: { offline?: 
     const info: PluginInfo = { name, spec, official: name.startsWith(DSH_SCOPE), state: 'ok', version: installed?.version }
     if (!installed) {
       info.state = 'broken'
-      info.reason = '已声明但 node_modules 里没有，宿主会拒绝加载'
+      info.reason = t('plugin.notInstalled')
     } else if (host) {
       const unmet = unmetHostRequirements(installed, host)
       const exempt = isExempt(exemptions, name, installed.version, host)
       if (unmet.length && !exempt) {
         info.state = 'broken'
-        info.reason = `要求 ${unmet.join('、')}，当前 dsh ${host}`
+        info.reason = t('plugin.requires', unmet.join(', '), host)
       } else if (unmet.length && exempt) {
         info.exempted = true
-        info.reason = `与 dsh ${host} 不兼容，靠版本豁免运行`
+        info.reason = t('plugin.exempt', host)
       }
     }
     plugins.push(info)
@@ -92,14 +93,14 @@ async function registryCheck(p: PluginInfo, host: string | undefined, cwd: strin
   }
   if (view.deprecated) {
     p.state = 'broken'
-    p.reason = `已被作者弃用：${String(view.deprecated).slice(0, 60)}`
+    p.reason = t('plugin.deprecated', String(view.deprecated).slice(0, 60))
     return
   }
   const latest: string | undefined = view['dist-tags']?.latest ?? view.version
   if (!latest || !p.version || !semver.valid(latest) || !semver.gt(latest, p.version)) {
     if (p.state === 'ok' && view.time?.modified && Date.now() - Date.parse(view.time.modified) > 365 * 86_400_000 && p.exempted) {
       p.state = 'broken'
-      p.reason = '超过一年没有发布新版本，且与当前 dsh 不兼容'
+      p.reason = t('plugin.stale')
     }
     return
   }
@@ -108,7 +109,7 @@ async function registryCheck(p: PluginInfo, host: string | undefined, cwd: strin
   const latestMeta = view.version === latest ? view : await npmViewFn(`${p.name}@${latest}`, cwd)
   const unmet = host && latestMeta ? unmetHostRequirements(latestMeta, host) : []
   if (unmet.length) {
-    p.reason = `${latest} 也不兼容当前 dsh（${unmet[0]}）`
+    p.reason = t('plugin.latestIncompatible', latest, unmet[0]!)
     if (p.state === 'ok') p.state = 'unknown'
     return
   }
@@ -151,7 +152,7 @@ export function pluginFindings(report: PluginReport | undefined): Finding[] {
       code: p.state === 'broken' ? 'plugin-broken' : 'plugin-exempted',
       severity: p.state === 'broken' ? ('critical' as const) : ('medium' as const),
       subject: p.name,
-      message: p.reason ?? '失效',
+      message: p.reason ?? t('plugin.broken'),
       area: 'plugin' as const,
     }))
 }

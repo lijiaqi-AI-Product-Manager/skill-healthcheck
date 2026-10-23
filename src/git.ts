@@ -26,7 +26,9 @@ export function git(args: string[], options: { cwd?: string; input?: string; tim
       { cwd: options.cwd, env: GIT_ENV, timeout: options.timeoutMs ?? 30_000, maxBuffer: 64 * 1024 * 1024, windowsHide: true, encoding: 'utf8' },
       (error, stdout, stderr) => {
         const code: unknown = error ? (error as { code?: unknown }).code : 0
-        resolve({ ok: !error, stdout: String(stdout ?? ''), stderr: String(stderr ?? ''), code: typeof code === 'number' ? code : 1 })
+        // No git on PATH: say so, instead of an empty "can't check: " later.
+        const missing = code === 'ENOENT' ? 'git not found on PATH' : ''
+        resolve({ ok: !error, stdout: String(stdout ?? ''), stderr: missing || String(stderr ?? ''), code: typeof code === 'number' ? code : 1 })
       },
     )
     if (options.input !== undefined) child.stdin?.end(options.input)

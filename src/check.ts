@@ -1,6 +1,8 @@
 import { localFindings, usageFindings } from './checks.js'
 import { buildInventory } from './discover.js'
-import { assessImpact } from './impact.js'
+import { t } from './i18n.js'
+import { Explainer, resolveProvider, type Provider } from './explain.js'
+import { assessImpact, wordDiff } from './impact.js'
 import { record, Store, type JournalEvent } from './journal.js'
 import { detectPlatform, type PlatformOptions } from './platforms.js'
 import { checkPlugins, pluginFindings, type PluginReport } from './plugins.js'
@@ -14,7 +16,11 @@ export interface SkillVerdict {
   upstream?: UpstreamResult
   findings: Finding[]
   state: 'ok' | 'update' | 'broken' | 'unchecked'
+  /** --explain: one plain sentence from an LLM about the upstream change. */
+  explanation?: string
 }
+
+export type ExplainStatus = { used: true; provider: string; model: string } | { used: false }
 
 export interface CheckResult {
   platform: PlatformInfo
@@ -27,12 +33,16 @@ export interface CheckResult {
   pluginFindings: Finding[]
   sessions: SessionSummary[]
   timeline: CatalogTimeline
+  /** Present when --explain was asked for. */
+  explain?: ExplainStatus
 }
 
 export interface CheckOptions extends PlatformOptions {
   offline?: boolean
   sessions?: boolean
   store?: Store
+  /** true: use the provider from the environment; a Provider: use that one (tests, the dsh plugin). */
+  explain?: boolean | Provider
   /** Status text while network checks run (the CLI shows it on stderr). */
   onProgress?: (text: string) => void
 }
@@ -51,7 +61,7 @@ export function scanAndRecord(options: CheckOptions = {}) {
 
 export async function runCheck(options: CheckOptions = {}): Promise<CheckResult> {
   const { store, platform, inventory, newEvents } = scanAndRecord(options)
-  const sessions = options.sessions === false ? [] : loadSessions(platform.sessionsDir, store)
+  const sessions = options.sessions === false ? [] : loadSessions(platform.sessionSources, store)
   const timeline = catalogTimeline(sessions)
   const local = localFindings(inventory)
   const usage = usageFindings(inventory, sessions, timeline)
@@ -61,7 +71,7 @@ export async function runCheck(options: CheckOptions = {}): Promise<CheckResult>
     offline: options.offline,
     onFetch: (url) => {
       fetched.add(url)
-      options.onProgress?.(`正在检查上游（第 ${fetched.size} 个仓库）：${url}`)
+      options.onProgress?.(t('progress.upstream', fetched.size, url))
     },
   })
 
@@ -78,10 +88,39 @@ export async function runCheck(options: CheckOptions = {}): Promise<CheckResult>
 
   const activeNames = new Set(inventory.active.map((s) => s.skill.name))
   const orphanFindings = local.filter((f) => f.code === 'dropped' || f.code === 'shadowed' || f.code === 'nested' || f.code === 'unscanned-root' || !activeNames.has(f.subject))
-  if (!options.offline && platform.id === 'dsh') options.onProgress?.('正在检查插件版本…')
+  if (!options.offline && platform.id === 'dsh') options.onProgress?.(t('progress.plugins'))
   const plugins = await checkPlugins(platform, { offline: options.offline })
+  const explain = options.explain && !options.offline ? await explainVerdicts(verdicts, options, store) : undefined
   options.onProgress?.('')
-  return { platform, inventory, newEvents, verdicts, orphanFindings, plugins, pluginFindings: pluginFindings(plugins), sessions, timeline }
+  return { platform, inventory, newEvents, verdicts, orphanFindings, plugins, pluginFindings: pluginFindings(plugins), sessions, timeline, explain }
+}
+
+/** Finding codes worth a plain-language sentence: the ones that change whether or how a skill runs. */
+const EXPLAINED = new Set(['description-changed', 'name-changed', 'upstream-invalid', 'model-invocation-disabled', 'user-invocation-disabled', 'scripts-added'])
+
+async function explainVerdicts(verdicts: SkillVerdict[], options: CheckOptions, store: Store): Promise<ExplainStatus> {
+  const provider = typeof options.explain === 'object' ? options.explain : resolveProvider()
+  if (!provider) return { used: false }
+  const explainer = new Explainer(provider, store)
+  const todo = verdicts.filter((v) => v.upstream?.state === 'changed' && v.findings.some((f) => EXPLAINED.has(f.code)))
+  let done = 0
+  await mapLimit(todo, 3, async (v) => {
+    const up = v.upstream as Extract<UpstreamResult, { state: 'changed' }>
+    const after = up.parse.ok ? up.parse.skill : undefined
+    const { removed, added } = after ? wordDiff(v.skill.skill.description, after.description) : { removed: [], added: [] }
+    options.onProgress?.(t('progress.explain', ++done))
+    v.explanation = await explainer.explain({
+      skill: v.skill.skill.name,
+      codes: v.findings.filter((f) => f.area === 'upstream').map((f) => f.code),
+      before: { name: v.skill.skill.name, description: v.skill.skill.description },
+      after: { name: after?.name ?? v.skill.skill.name, description: after?.description ?? '' },
+      removedWords: removed,
+      addedWords: added,
+      scriptsAdded: up.scripts.added,
+    })
+  })
+  explainer.save()
+  return { used: true, provider: provider.id, model: provider.model }
 }
 
 function upstreamFindings(skill: InstalledSkill, upstream: UpstreamResult, platform: PlatformInfo): Finding[] {
@@ -90,19 +129,19 @@ function upstreamFindings(skill: InstalledSkill, upstream: UpstreamResult, platf
     case 'current':
       return []
     case 'unreachable':
-      return [{ code: 'upstream-unreachable', severity: 'info', subject: name, message: `上游暂时无法检查：${upstream.detail}`, area: 'upstream' }]
+      return [{ code: 'upstream-unreachable', severity: 'info', subject: name, message: t('up.unreachable', upstream.detail), area: 'upstream' }]
     case 'repo-missing':
-      return [{ code: 'repo-missing', severity: 'critical', subject: name, message: `上游仓库已不存在（${upstream.detail}），本地副本已无人维护`, area: 'upstream' }]
+      return [{ code: 'repo-missing', severity: 'critical', subject: name, message: t('up.repoMissing', upstream.detail), area: 'upstream' }]
     case 'repo-moved':
-      return [{ code: 'repo-moved', severity: 'medium', subject: name, message: `上游仓库已迁移到 ${upstream.newUrl}`, detail: ['用 skill-healthcheck adopt 更新来源'], area: 'upstream' }]
+      return [{ code: 'repo-moved', severity: 'medium', subject: name, message: t('up.repoMoved', upstream.newUrl), detail: [t('up.adoptHint')], area: 'upstream' }]
     case 'removed-in-repo':
       return [
         {
           code: 'removed-upstream',
           severity: 'critical',
           subject: name,
-          message: `上游已删除这个技能${upstream.date ? `（${upstream.date.slice(0, 10)}）` : ''}，本地副本已无人维护`,
-          detail: [`删除提交：${upstream.commit.slice(0, 10)}`],
+          message: t('up.removed', upstream.date?.slice(0, 10)),
+          detail: [t('up.deletedIn', upstream.commit.slice(0, 10))],
           area: 'upstream',
         },
       ]
@@ -116,10 +155,10 @@ function upstreamFindings(skill: InstalledSkill, upstream: UpstreamResult, platf
         movedTo: upstream.movedTo,
       })
       if (impact.length === 0) {
-        impact.push({ code: 'upstream-minor', severity: 'low', subject: name, message: '上游有小改动（不影响触发）', area: 'upstream' })
+        impact.push({ code: 'upstream-minor', severity: 'low', subject: name, message: t('up.minor'), area: 'upstream' })
       }
-      const when = upstream.date ? `上游 ${upstream.date.slice(0, 10)} 更新` : '上游有更新'
-      for (const f of impact) f.detail = [when + (upstream.localModified ? '；你本地也改过这个文件' : ''), ...(f.detail ?? [])]
+      const when = upstream.date ? t('up.updatedOn', upstream.date.slice(0, 10)) : t('up.updated')
+      for (const f of impact) f.detail = [when + (upstream.localModified ? t('up.localModified') : ''), ...(f.detail ?? [])]
       return impact
     }
   }

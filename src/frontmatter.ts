@@ -1,6 +1,7 @@
 // Mirrors @deepseek-ai/dsh-skill-filesystem's SKILL.md parsing so that "dropped" here
 // means exactly "dsh silently ignores this file". Keep in sync with dsh 0.2.x.
 import { parse } from 'yaml'
+import { t } from './i18n.js'
 
 export const SKILL_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
@@ -40,18 +41,18 @@ export function parseSkillText(raw: string): ParseResult {
   try {
     split = splitFrontmatter(raw)
   } catch (error) {
-    return { ok: false, code: 'invalid-yaml', reason: `YAML 解析失败：${firstLine(error)}` }
+    return { ok: false, code: 'invalid-yaml', reason: t('fm.yaml', firstLine(error)) }
   }
-  if (!split) return { ok: false, code: 'missing-frontmatter', reason: '缺少 YAML frontmatter（文件必须以 --- 开头）' }
+  if (!split) return { ok: false, code: 'missing-frontmatter', reason: t('fm.missing') }
   const { data, body } = split
   const name = stringField(data, 'name')
   const description = stringField(data, 'description')
   const rawName = typeof data.name === 'string' ? data.name : undefined
   if (name === undefined || description === undefined) {
-    return { ok: false, code: 'missing-name-or-description', reason: 'frontmatter 必须同时有 name 和 description', rawName }
+    return { ok: false, code: 'missing-name-or-description', reason: t('fm.required'), rawName }
   }
   if (!SKILL_NAME.test(name)) {
-    return { ok: false, code: 'invalid-name', reason: `name "${name}" 不是 kebab-case（只允许小写字母、数字和单个连字符）`, rawName }
+    return { ok: false, code: 'invalid-name', reason: t('fm.badName', name), rawName }
   }
   let invocation: InvocationPolicy
   try {
@@ -91,7 +92,7 @@ export function splitFrontmatter(raw: string): { data: Record<string, unknown>; 
 
 function parseInvocationPolicy(data: Record<string, unknown>): InvocationPolicy {
   for (const [legacy, canonical] of LEGACY_KEYS) {
-    if (Object.hasOwn(data, legacy)) throw new Error(`字段 "${legacy}" 已不支持，应改为 "${canonical}"`)
+    if (Object.hasOwn(data, legacy)) throw new Error(t('fm.legacyKey', legacy, canonical))
   }
   const disableModelInvocation = frontmatterBoolean(data, 'disable-model-invocation')
   const userInvocable = frontmatterBoolean(data, 'user-invocable')
@@ -116,7 +117,7 @@ function frontmatterBoolean(data: Record<string, unknown>, key: string): boolean
         return false
     }
   }
-  throw new TypeError(`字段 "${key}" 必须是布尔值，当前是 ${JSON.stringify(value)}`)
+  throw new TypeError(t('fm.notBool', key, JSON.stringify(value)))
 }
 
 function stringField(data: Record<string, unknown>, key: string): string | undefined {

@@ -1,0 +1,38 @@
+# Publishes both packages to npm when a version tag (v1.0.0, …) is pushed.
+# Needs a repository secret NPM_TOKEN (an npm automation token with publish rights).
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  id-token: write # npm provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - name: Tag matches package versions
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          core=$(node -p "require('./package.json').version")
+          plugin=$(node -p "require('./packages/dsh-skill-healthcheck/package.json').version")
+          test "$tag" = "$core" && test "$tag" = "$plugin" || { echo "tag $tag, core $core, plugin $plugin"; exit 1; }
+      - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm publish --provenance --access public
+        working-directory: packages/dsh-skill-healthcheck
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

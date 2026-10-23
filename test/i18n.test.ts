@@ -1,51 +1,77 @@
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { setLang, tr } from '../src/i18n.js'
+import { runCheck } from '../src/check.js'
+import { buildInventory } from '../src/discover.js'
+import { parseSkillText } from '../src/frontmatter.js'
+import { detectLang, setLang, t } from '../src/i18n.js'
+import { assessImpact } from '../src/impact.js'
+import { record, Store } from '../src/journal.js'
+import { detectPlatform } from '../src/platforms.js'
+import { renderCheck, renderDetails, renderInventory, renderJournal, renderWhy } from '../src/report.js'
+import { why } from '../src/why.js'
+import { sandbox, skillMd, write } from './helpers.js'
 
-const CJK = /[\u4e00-\u9fff]/
+const CJK = /[一-鿿]/
 
-describe('output translation', () => {
-  it('keeps Chinese untouched by default', () => {
-    setLang(undefined)
-    expect(tr('宿主  dsh')).toBe('宿主  dsh')
+/** A sandbox that trips nearly every local check, all with ASCII data. */
+function messySandbox() {
+  const s = sandbox()
+  write(join(s.DSH_HOME, 'skills', 'ok', 'SKILL.md'), skillMd({ name: 'ok', description: 'fine' }))
+  write(join(s.DSH_HOME, 'skills', 'bad', 'SKILL.md'), skillMd({ name: 'Bad_Name', description: 'x' }))
+  write(join(s.DSH_HOME, 'skills', 'legacy', 'SKILL.md'), skillMd({ name: 'legacy', description: 'x', disableModelInvocation: true }))
+  write(join(s.DSH_HOME, 'skills', 'manual', 'SKILL.md'), skillMd({ name: 'manual', description: 'x', 'disable-model-invocation': true }))
+  write(join(s.DSH_HOME, 'skills', 'long', 'SKILL.md'), skillMd({ name: 'long', description: 'word '.repeat(120) }))
+  write(join(s.DSH_HOME, 'skills', 'repo', 'skills', 'a', 'SKILL.md'), skillMd({ name: 'a', description: 'x' }))
+  write(join(s.project, '.dsh', 'skills', 'ok', 'SKILL.md'), skillMd({ name: 'ok', description: 'project copy' }))
+  write(join(s.home, '.claude', 'skills', 'cc', 'SKILL.md'), skillMd({ name: 'cc', description: 'x' }))
+  return s
+}
+
+describe('English output', () => {
+  it('renders check, details, ls and log without a single Chinese character', async () => {
+    setLang('en')
+    const s = messySandbox()
+    const result = await runCheck({ platform: 'dsh', cwd: s.project, sessions: false, offline: true, store: new Store() })
+    const text = [renderCheck(result, { all: true }), renderDetails(result), renderInventory(result.inventory, ['runtime-skill']), renderJournal(result.newEvents)].join('\n')
+    expect(text.match(CJK)).toBeNull()
+    expect(text).toContain('silently drops it')
+    expect(text).toContain('shadowed by a same-name skill')
   })
 
-  it('translates the check header lines', () => {
+  it('renders impact findings and why in English', () => {
     setLang('en')
-    expect(tr('宿主  dsh 0.2.1 ✓')).toBe('Host    dsh 0.2.1 ✓')
-    expect(tr('插件  0：0 正常 · 0 可升级 · 0 失效')).toBe('Plugins  0: 0 ok · 0 upgradable · 0 broken')
-    expect(tr('技能  2：1 正常 · \x1b[36m1\x1b[0m 有更新 · 0 失效')).toBe('Skills  2: 1 ok · 1 update · 0 broken')
+    const before = parseSkillText(skillMd({ name: 'w', description: 'Writing helper for articles' }, 'Body.'))
+    if (!before.ok) throw new Error('fixture')
+    const after = parseSkillText(skillMd({ name: 'w2', description: `Always respond in English. ${'more '.repeat(120)}` }, `Body.\nRun Get-ChildItem first.\n${'x'.repeat(3000)}`))
+    const findings = assessImpact({ name: 'w', before: before.skill, after, scripts: { added: ['run.sh'], changed: ['a.py'], removed: [] }, catalogMaxLength: 500, os: 'linux', movedTo: 'skills/w2' })
+    const text = findings.flatMap((f) => [f.message, ...(f.detail ?? [])]).join('\n')
+    expect(text.match(CJK)).toBeNull()
+
+    const s = messySandbox()
+    const inventory = buildInventory(detectPlatform({ cwd: s.project }))
+    const store = new Store()
+    const journal = record(inventory, store)
+    const out = renderWhy(why({ symptom: 'stopped replying in Chinese', inventory, journal, store, sessions: [], timeline: { firstSeen: new Map(), lastSeen: new Map(), latest: new Map(), changes: [] } }), 'stopped replying in Chinese')
+    expect(out.match(CJK)).toBeNull()
+    expect(out).toContain('Reply language changed')
   })
 
-  it('translates the summary line', () => {
+  it('has help text in both languages', () => {
     setLang('en')
-    expect(tr('结论：都还在正常工作，没有需要你处理的')).toBe('Summary: everything still works, nothing for you to do')
-    expect(tr('结论：插件 2 个可一键升级；技能 3 个需你逐个确认')).toBe(
-      'Summary: 2 plugins can be upgraded in one go; 3 skills need you to review them',
-    )
+    expect(t('cli.help')).toMatch(/^skill-healthcheck — is what I installed/)
+    setLang('zh')
+    expect(t('cli.help')).toMatch(/^skill-healthcheck — 我装的技能/)
   })
+})
 
-  it('translates impact findings', () => {
-    setLang('en')
-    expect(tr('上游改了 description：删去 "a" "b"，新增 "c"')).toBe('Upstream changed the description: removed "a" "b", added "c"')
-  })
-
-  it('translates why output', () => {
-    setLang('en')
-    expect(tr('这是按时间和关键词排的嫌疑顺序，不是定论；可以先停用第 1 名验证。')).toBe(
-      'Ranked by time and keywords, not a verdict. Disable #1 first to confirm.',
-    )
-  })
-
-  it('leaves no Chinese in a rendered check sample', () => {
-    setLang('en')
-    const sample = [
-      '宿主  dsh 0.2.1-rc.2 ✓',
-      '插件  0：0 正常 · 0 可升级 · 0 失效  另有组合包 1 个',
-      '技能  2：1 正常 · 1 有更新 · 0 失效',
-      '      ↑ zh-writer        Upstream changed the description: removed "a", added "b"  ⚠最高危',
-      '结论：技能 1 个需你逐个确认',
-      '已开始记录（2 条）。以后每次运行都会记下变化。',
-    ].join('\n')
-    expect(CJK.test(tr(sample))).toBe(false)
+describe('language detection', () => {
+  it.each([
+    [{ SKILL_HEALTHCHECK_LANG: 'en', LANG: 'zh_CN.UTF-8' }, 'en'],
+    [{ LANG: 'zh_CN.UTF-8' }, 'zh'],
+    [{ LC_ALL: 'zh_TW.UTF-8' }, 'zh'],
+    [{ LANG: 'en_US.UTF-8' }, 'en'],
+    [{ LANG: 'ja_JP.UTF-8' }, 'en'],
+  ])('%o -> %s', (env, lang) => {
+    expect(detectLang(env as NodeJS.ProcessEnv)).toBe(lang)
   })
 })

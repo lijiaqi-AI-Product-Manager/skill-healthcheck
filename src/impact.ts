@@ -1,7 +1,8 @@
 // Change impact: "will this update break what works for you now?" Pure functions over
 // two versions of a skill, so every rule is unit-testable without git or a filesystem.
 import { catalogDescription, type ParseResult, type ParsedSkill } from './frontmatter.js'
-import { currentOs, loadLexicon, signalHits, tokenSupports, type OsName } from './lexicon.js'
+import { t } from './i18n.js'
+import { currentOs, loadLexicon, signalHits, symptomTitle, tokenExplain, tokenSupports, type OsName } from './lexicon.js'
 import type { Finding, Severity } from './types.js'
 
 export interface ImpactInput {
@@ -25,34 +26,34 @@ export function assessImpact(input: ImpactInput): Finding[] {
   const { before } = input
 
   if (!input.after.ok) {
-    add('upstream-invalid', 'critical', `上游新版本会被静默丢弃：${input.after.reason}`)
+    add('upstream-invalid', 'critical', t('impact.invalid', input.after.reason))
     return out
   }
   const after = input.after.skill
 
   if (before.name !== after.name) {
-    add('name-changed', 'critical', `上游改名为 ${after.name} → 你的 /${before.name} 会失效`, [`新入口：/${after.name}`])
+    add('name-changed', 'critical', t('impact.renamed', after.name, before.name), [t('impact.newEntry', after.name)])
   }
   if (before.invocation.modelInvocable && !after.invocation.modelInvocable) {
-    add('model-invocation-disabled', 'critical', '上游加了 disable-model-invocation，模型将不再自动使用它')
+    add('model-invocation-disabled', 'critical', t('impact.modelDisabled'))
   }
   if (before.invocation.userInvocable && !after.invocation.userInvocable) {
-    add('user-invocation-disabled', 'critical', `上游加了 user-invocable: false，/${before.name} 会失效`)
+    add('user-invocation-disabled', 'critical', t('impact.userDisabled', before.name))
   }
 
   if (normalizeSpace(before.description) !== normalizeSpace(after.description)) {
     const { removed, added } = wordDiff(before.description, after.description)
     const newSignals = signalHits(after.description).filter((h) => !before.description.toLowerCase().includes(h.hit.toLowerCase()))
     const parts: string[] = []
-    if (removed.length) parts.push(`删去 ${quoteWords(removed.slice(0, 3))}`)
-    if (added.length) parts.push(`新增 ${quoteWords(added.slice(0, 3))}`)
-    const detail = [`旧：${clip(before.description, 160)}`, `新：${clip(after.description, 160)}`]
-    for (const h of newSignals) detail.push(`新增"${h.hit}"（${h.symptom.title_zh}）`)
+    if (removed.length) parts.push(t('impact.removedWords', quoteWords(removed.slice(0, 3))))
+    if (added.length) parts.push(t('impact.addedWords', quoteWords(added.slice(0, 3))))
+    const detail = [t('impact.was', clip(before.description, 160)), t('impact.now', clip(after.description, 160))]
+    for (const h of newSignals) detail.push(t('impact.newSignal', h.hit, symptomTitle(h.symptom)))
     // Calibrated on 44 real description changes: dropping words is what loses triggers;
     // a description that only grew mostly widens when the skill fires.
     const severity: Severity = removed.length > 0 ? 'critical' : newSignals.length > 0 ? 'high' : 'medium'
-    const verb = removed.length > 0 ? '改了' : '扩写了'
-    add('description-changed', severity, `上游${verb} description：${parts.join('，') || '措辞调整'}`, detail)
+    const summary = parts.join(t('impact.join')) || t('impact.wording')
+    add('description-changed', severity, removed.length > 0 ? t('impact.descChanged', summary) : t('impact.descExpanded', summary), detail)
   }
 
   if (input.catalogMaxLength) {
@@ -62,9 +63,9 @@ export function assessImpact(input: ImpactInput): Finding[] {
     if (afterLen > max && beforeLen <= max) {
       const shown = catalogDescription(after.description, max)
       const lost = normalizeSpace(after.description).slice(max - 3)
-      add('description-truncated', 'high', `description 变为 ${afterLen} 字符，超过 ${max} 会被截断`, [`模型看不到的结尾：…${clip(lost, 80)}`, `目录中显示：${clip(shown, 80)}`])
+      add('description-truncated', 'high', t('impact.truncated', afterLen, max), [t('impact.hiddenTail', clip(lost, 80)), t('impact.catalogShows', clip(shown, 80))])
     } else if (afterLen > beforeLen * 1.5 && afterLen - beforeLen > 120) {
-      add('description-grew', 'low', `description 变长 ${afterLen - beforeLen} 字符，每轮都多占目录上下文`)
+      add('description-grew', 'low', t('impact.descGrew', afterLen - beforeLen))
     }
   }
 
@@ -72,16 +73,16 @@ export function assessImpact(input: ImpactInput): Finding[] {
     const os = input.os ?? currentOs()
     const foreign = input.scripts.added.filter((f) => (os === 'windows' ? /\.(sh|bash|zsh)$/.test(f) : /\.(ps1|bat|cmd)$/.test(f)))
     const detail = input.scripts.added.map((f) => `scripts/${f}`)
-    if (foreign.length) detail.push(`其中 ${foreign.join(', ')} 在当前系统上可能跑不起来`)
-    add('scripts-added', 'high', `新增 ${input.scripts.added.length} 个脚本，需人工审代码后再用`, detail)
+    if (foreign.length) detail.push(t('impact.foreignScripts', foreign.join(', ')))
+    add('scripts-added', 'high', t('impact.scriptsAdded', input.scripts.added.length), detail)
   }
   if (input.scripts?.changed.length) {
-    add('scripts-changed', 'medium', `${input.scripts.changed.length} 个脚本内容有改动，需复核`, input.scripts.changed.map((f) => `scripts/${f}`))
+    add('scripts-changed', 'medium', t('impact.scriptsChanged', input.scripts.changed.length), input.scripts.changed.map((f) => `scripts/${f}`))
   }
 
   const bodyDelta = after.body.length - before.body.length
   if (bodyDelta > 2000) {
-    add('body-grew', 'low', `正文 +${formatChars(bodyDelta)}（每次调用约 +${estimateTokens(after.body) - estimateTokens(before.body)} token）`)
+    add('body-grew', 'low', t('impact.bodyGrew', t('impact.chars', bodyDelta), estimateTokens(after.body) - estimateTokens(before.body)))
   }
 
   const os = input.os ?? currentOs()
@@ -90,12 +91,12 @@ export function assessImpact(input: ImpactInput): Finding[] {
     add(
       'platform-specific',
       'medium',
-      `新增了 ${[...new Set(platformHits.map((h) => h.label))].join('、')} 专用写法，在你的 ${osLabel(os)} 上可能失效`,
-      platformHits.map((h) => `${h.match}：${h.explain}`),
+      t('impact.platform', [...new Set(platformHits.map((h) => h.label))].join(' / '), osLabel(os)),
+      platformHits.map((h) => `${h.match}: ${h.explain}`),
     )
   }
   if (input.movedTo !== undefined && before.name === after.name) {
-    add('moved-in-repo', 'medium', `上游把技能移到了 ${input.movedTo}`)
+    add('moved-in-repo', 'medium', t('impact.moved', input.movedTo))
   }
   return out
 }
@@ -112,7 +113,7 @@ export function newPlatformTokens(beforeText: string, afterText: string, os: OsN
     }
     const m = re.exec(afterText)
     if (!m || re.test(beforeText)) continue
-    hits.push({ label: token.only_on.map(osLabel).join('/'), match: m[0].trim(), explain: token.explain_zh })
+    hits.push({ label: token.only_on.map(osLabel).join('/'), match: m[0].trim(), explain: tokenExplain(token) })
   }
   return hits
 }
@@ -132,22 +133,33 @@ export function words(text: string): string[] {
   return out
 }
 
-/** Words that disappeared from / appeared in a description, most informative first. */
+/** Words that disappeared from / appeared in a description, most informative first, in their original casing. */
 export function wordDiff(before: string, after: string): { removed: string[]; added: string[] } {
   const b = new Set(words(before))
   const a = new Set(words(after))
   // "discovers" -> "discover" is a rewording, not a lost trigger.
   const bStems = new Set([...b].map(stem))
   const aStems = new Set([...a].map(stem))
-  const rank = (list: string[]) => list.sort((x, y) => weight(y) - weight(x)).slice(0, 5)
-  return { removed: rank([...b].filter((w) => !aStems.has(stem(w)))), added: rank([...a].filter((w) => !bStems.has(stem(w)))) }
+  const rank = (list: string[], source: string) => list.sort((x, y) => weight(y) - weight(x)).slice(0, 5).map((w) => originalCase(w, source))
+  return { removed: rank([...b].filter((w) => !aStems.has(stem(w))), before), added: rank([...a].filter((w) => !bStems.has(stem(w))), after) }
+}
+
+/** "chinese" back to "Chinese" as the author wrote it. */
+function originalCase(word: string, source: string): string {
+  const i = source.toLowerCase().indexOf(word)
+  return i >= 0 ? source.slice(i, i + word.length) : word
 }
 
 function stem(w: string): string {
   return /^[a-z]+$/.test(w) && w.length > 4 ? w.replace(/(ing|ed|es|s)$/, '') : w
 }
 
+// Language names are usually the trigger itself ("Chinese writing assistant"); losing one
+// matters more than any long word.
+const LANGUAGE_WORDS = new Set(['chinese', 'english', 'japanese', 'korean', 'spanish', 'french', 'german', 'portuguese', 'russian', '中文', '英文', '英语', '汉语', '日文', '日语', '韩文', '韩语'])
+
 function weight(w: string): number {
+  if (LANGUAGE_WORDS.has(w)) return 100
   // CJK words carry more meaning per character than Latin ones.
   return /[一-鿿]/.test(w) ? w.length * 3 : w.length
 }
@@ -161,12 +173,8 @@ export function estimateTokens(text: string): number {
   return Math.round(cjk * CJK_TOKENS_PER_CHAR + (text.length - cjk) / LATIN_CHARS_PER_TOKEN)
 }
 
-function formatChars(n: number): string {
-  return n >= 1000 ? `${(n / 1000).toFixed(1)}k 字符` : `${n} 字符`
-}
-
 function osLabel(os: string): string {
-  return { windows: 'Windows', macos: 'macOS', linux: 'Linux', posix: 'macOS/Linux' }[os] ?? os
+  return os === 'windows' || os === 'macos' || os === 'linux' || os === 'posix' ? t(`os.${os}`) : os
 }
 
 function normalizeSpace(s: string): string {

@@ -1,13 +1,16 @@
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { getLang } from './i18n.js'
 
 export interface Symptom {
   id: string
   title_zh: string
+  title_en: string
   user_phrases: string[]
   skill_signals: { phrases: string[]; regex: string[] }
   explain_zh: string
+  explain_en: string
 }
 
 export interface PlatformToken {
@@ -17,6 +20,15 @@ export interface PlatformToken {
   kind: string
   example: string
   explain_zh: string
+  explain_en: string
+}
+
+export function symptomTitle(s: Symptom): string {
+  return getLang() === 'zh' ? s.title_zh : s.title_en
+}
+
+export function tokenExplain(token: PlatformToken): string {
+  return getLang() === 'zh' ? token.explain_zh : token.explain_en
 }
 
 export interface Lexicon {

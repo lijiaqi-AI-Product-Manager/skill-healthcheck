@@ -58,6 +58,32 @@ describe('buildInventory on dsh roots', () => {
     expect(localFindings(inv).map((f) => f.code)).toContain('description-truncated')
   })
 
+  it('does not call the same skill installed for Claude Code and for Codex a conflict', () => {
+    const s = sandbox('generic')
+    const md = skillMd({ name: 'pdf', description: 'PDF tools' })
+    write(join(s.home, '.claude', 'skills', 'pdf', 'SKILL.md'), md)
+    write(join(s.home, '.codex', 'skills', 'pdf', 'SKILL.md'), skillMd({ name: 'pdf', description: 'a different version' }))
+    const inv = buildInventory(detectPlatform({ cwd: s.project }))
+    expect(inv.shadowed).toEqual([])
+    expect(inv.active.map((a) => a.root.agent)).toEqual(['claude-code', 'codex'])
+  })
+
+  it('reports a same-name conflict within one agent without claiming which copy wins', () => {
+    const s = sandbox('generic')
+    write(join(s.project, '.claude', 'skills', 'pdf', 'SKILL.md'), skillMd({ name: 'pdf', description: 'project copy' }))
+    write(join(s.home, '.claude', 'skills', 'pdf', 'SKILL.md'), skillMd({ name: 'pdf', description: 'user copy' }))
+    const inv = buildInventory(detectPlatform({ cwd: s.project }))
+    const f = localFindings(inv).find((x) => x.code === 'shadowed')!
+    expect(f.severity).toBe('high')
+    expect(f.message).toContain('claude-code 只会加载其中一份')
+  })
+
+  it("skips Codex's own .system cache under $CODEX_HOME/skills", () => {
+    const s = sandbox('generic')
+    write(join(s.home, '.codex', 'skills', '.system', 'builtin', 'SKILL.md'), skillMd({ name: 'builtin', description: 'x' }))
+    expect(buildInventory(detectPlatform({ cwd: s.project })).active).toEqual([])
+  })
+
   it('scans ~/.claude/skills in generic mode', () => {
     const s = sandbox('generic')
     write(join(s.home, '.claude', 'skills', 'cc-only', 'SKILL.md'), skillMd({ name: 'cc-only', description: 'd' }))

@@ -1,6 +1,9 @@
 // Attribution: given a symptom ("why doesn't it answer in Chinese anymore?") and/or a
 // time, rank what changed. Deterministic: symptom lexicon x time proximity x behavior
 // change points from session logs. It ranks suspects; it does not prove guilt.
+import type { ExplainStatus } from './check.js'
+import { Explainer, resolveProvider, type Provider } from './explain.js'
+import { t } from './i18n.js'
 import type { JournalEvent, Store } from './journal.js'
 import { loadLexicon, signalHits, type Symptom } from './lexicon.js'
 import { parseSkillText } from './frontmatter.js'
@@ -17,6 +20,10 @@ export interface Suspect {
   t?: number
   what: string
   evidence: string[]
+  /** The description change behind the suspicion, when there is one (for --explain). */
+  change?: { from: string; to: string }
+  /** --explain: how this change could cause the symptom, in one sentence. */
+  explanation?: string
 }
 
 export interface WhyResult {
@@ -24,6 +31,32 @@ export interface WhyResult {
   onset?: { t: number; evidence: string }
   since?: number
   suspects: Suspect[]
+  explain?: ExplainStatus
+}
+
+/** --explain for why: one sentence on how the top suspect's change could cause the complaint. */
+export async function explainWhy(result: WhyResult, symptom: string, explain: true | Provider, store: Store): Promise<void> {
+  const provider = explain === true ? resolveProvider() : explain
+  if (!provider) {
+    result.explain = { used: false }
+    return
+  }
+  const top = result.suspects[0]
+  if (top?.change) {
+    const explainer = new Explainer(provider, store)
+    const { removed, added } = wordDiff(top.change.from, top.change.to)
+    top.explanation = await explainer.explain({
+      skill: top.name,
+      codes: ['description-changed'],
+      before: { name: top.name, description: top.change.from },
+      after: { name: top.name, description: top.change.to },
+      removedWords: removed,
+      addedWords: added,
+      symptom,
+    })
+    explainer.save()
+  }
+  result.explain = { used: true, provider: provider.id, model: provider.model }
 }
 
 const MATCH_THRESHOLD = 0.6
@@ -43,11 +76,11 @@ export function matchSymptoms(text: string): Symptom[] {
 /** Share of the phrase's CJK bigrams and Latin words that also occur in the text. */
 export function phraseScore(phrase: string, text: string): number {
   const p = phrase.toLowerCase()
-  const t = text.toLowerCase()
-  if (t.includes(p)) return 1
+  const lower = text.toLowerCase()
+  if (lower.includes(p)) return 1
   const pg = grams(p)
   if (pg.size < 2) return 0
-  const tg = grams(t)
+  const tg = grams(lower)
   let hit = 0
   for (const g of pg) if (tg.has(g)) hit++
   return hit < 2 ? 0 : hit / pg.size
@@ -81,7 +114,7 @@ export function languageOnset(sessions: SessionSummary[]): { t: number; evidence
     if (avgBefore > 0.6 && cur.asst! < 0.3 && userZh) {
       return {
         t: Date.parse(`${cur.day}T00:00:00`),
-        evidence: `助手回复的中文占比：${cur.day} 之前约 ${pct(avgBefore)}，当天 ${pct(cur.asst!)}（你仍在用中文提问）`,
+        evidence: t('why.languageOnset', cur.day, pct(avgBefore), pct(cur.asst!)),
       }
     }
   }
@@ -101,29 +134,39 @@ export function why(params: {
   const onset = symptoms.some((s) => s.id === 'language') ? languageOnset(params.sessions) : undefined
   const anchor = params.since ?? onset?.t
   const suspects = new Map<string, Suspect>()
-  const bump = (name: string, score: number, t: number | undefined, what: string, evidence: string[]) => {
+  const bump = (name: string, score: number, when: number | undefined, what: string, evidence: string[], change?: Suspect['change']) => {
     const cur = suspects.get(name)
-    if (!cur || score > cur.score) suspects.set(name, { name, score, t, what, evidence: [...new Set([...(cur?.evidence ?? []), ...evidence])] })
-    else cur.evidence = [...new Set([...cur.evidence, ...evidence])]
+    if (!cur || score > cur.score) {
+      const next: Suspect = { name, score, t: when, what, evidence: [...new Set([...(cur?.evidence ?? []), ...evidence])] }
+      const keep = change ?? cur?.change
+      if (keep) next.change = keep
+      suspects.set(name, next)
+    } else {
+      cur.evidence = [...new Set([...cur.evidence, ...evidence])]
+      cur.change ??= change
+    }
   }
-  const proximity = (t: number | undefined) => {
-    if (anchor === undefined || t === undefined) return 1
-    const days = (anchor - t) / DAY
+  const proximity = (when: number | undefined) => {
+    if (anchor === undefined || when === undefined) return 1
+    const days = (anchor - when) / DAY
     if (days < -1) return 0.15 // happened after the symptom started: unlikely cause
     return Math.max(0.2, 1.5 - Math.abs(days) / 10)
   }
 
+  // A changed description is itself the usual reason a skill stops triggering.
+  const notTriggered = symptoms.some((s) => s.id === 'skill-not-triggered')
+
   // 1) What the model actually saw change (session catalogs), including before the first run.
   for (const change of params.timeline.changes) {
     const hits = newHits(change.from, change.to, symptoms)
-    const base = symptoms.length ? hits.length * 2 : 0.5
-    if (symptoms.length && hits.length === 0) continue
     const { removed, added: addedWords } = wordDiff(change.from, change.to)
-    bump(change.name, (base + 1) * proximity(change.t), change.t, `${localDay(change.t)} 起模型看到的 description 变了`, [
-      ...hits.map((h) => `新增"${h}"`),
-      ...(removed.length ? [`删去 ${removed.map((w) => `"${w}"`).join(' ')}`] : []),
-      ...(addedWords.length && !hits.length ? [`新增 ${addedWords.map((w) => `"${w}"`).join(' ')}`] : []),
-    ])
+    if (symptoms.length && hits.length === 0 && !notTriggered) continue
+    const base = symptoms.length ? hits.length * 2 + (notTriggered ? 1 + removed.length * 0.5 : 0) : 0.5
+    bump(change.name, (base + 1) * proximity(change.t), change.t, t('why.catalogChanged', localDay(change.t)), [
+      ...hits.map((h) => t('why.added', h)),
+      ...(removed.length ? [t('why.removedWords', removed.map((w) => `"${w}"`).join(' '))] : []),
+      ...(addedWords.length && !hits.length ? [t('why.addedWords', addedWords.map((w) => `"${w}"`).join(' '))] : []),
+    ], { from: change.from, to: change.to })
   }
 
   // 2) The recorder's journal: installs and content changes, with full text from the blob store.
@@ -135,10 +178,11 @@ export function why(params: {
     const hits = newHits(e.kind === 'baseline' || e.kind === 'added' ? '' : beforeText, afterText, symptoms)
     if (symptoms.length && hits.length === 0) continue
     if (!symptoms.length && e.kind === 'baseline') continue
-    const verb = { added: '安装', changed: '内容变更', baseline: '已安装（首次记录时）', moved: '移动' }[e.kind]
-    const when = `${localDay(e.t)}${e.estimated ? '（按文件时间估计）' : ''}`
+    const verb = t(`why.verb.${e.kind}`)
+    const when = `${localDay(e.t)}${e.estimated ? t('why.estimated') : ''}`
     const weight = e.kind === 'baseline' ? 0.6 : 1
-    bump(e.name, ((symptoms.length ? hits.length * 2 : 0.5) + 1) * weight * proximity(e.t), e.t, `${when} ${verb}`, hits.map((h) => `内容含"${h}"`))
+    const change = e.before?.description !== undefined && e.after.description !== undefined && e.before.description !== e.after.description ? { from: e.before.description, to: e.after.description } : undefined
+    bump(e.name, ((symptoms.length ? hits.length * 2 : 0.5) + 1) * weight * proximity(e.t), e.t, `${when} ${verb}`, hits.map((h) => t('why.contains', h)), change)
   }
 
   // 3) Currently active skills whose text matches, even with no recorded change.
@@ -146,16 +190,18 @@ export function why(params: {
     for (const s of params.inventory.active) {
       const hits = relevantHits(`${s.skill.description}\n${s.skill.body}`, symptoms)
       if (hits.length === 0) continue
-      bump(s.skill.name, hits.length * 0.8 * (anchor ? 0.5 : 1), undefined, '当前生效，内容含相关规则', hits.map((h) => `内容含"${h}"`))
+      bump(s.skill.name, hits.length * 0.8 * (anchor ? 0.5 : 1), undefined, t('why.activeMatch'), hits.map((h) => t('why.contains', h)))
     }
   }
 
   // 4) "Skill stopped being used" symptoms: rank by usage drop.
-  if (symptoms.some((s) => s.id === 'skill-not-triggered')) {
-    for (const s of params.inventory.active) {
-      const u = usageStats(params.sessions, s.skill.name)
+  // Includes skills that only exist in the logs (plugin-provided or built into the host).
+  if (notTriggered) {
+    const names = new Set([...params.inventory.active.map((s) => s.skill.name), ...params.sessions.flatMap((s) => s.skillCalls.map((c) => c.name))])
+    for (const name of names) {
+      const u = usageStats(params.sessions, name)
       if (u.calls >= 2 && u.quietSessions >= 2) {
-        bump(s.skill.name, 2 + Math.min(u.quietSessions, 10) / 5, u.lastCall, `${localDay(u.lastCall!)} 后再没被调用`, [`共调用 ${u.calls} 次，之后 ${u.quietSessions} 个会话 0 次`])
+        bump(name, 2 + Math.min(u.quietSessions, 10) / 5, u.lastCall, t('why.quiet', localDay(u.lastCall!)), [t('why.quietEvidence', u.calls, u.quietSessions)])
       }
     }
   }

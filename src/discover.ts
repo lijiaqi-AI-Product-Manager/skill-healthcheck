@@ -43,10 +43,8 @@ export function buildInventory(platform: PlatformInfo): Inventory {
   const all: SkillEntry[] = []
   const nested: NestedSkillDir[] = []
   const seenRoots = new Set<string>()
-  for (const root of platform.roots) {
-    const key = canonical(root.path)
-    if (seenRoots.has(key)) continue // e.g. project root == home: same directory listed twice
-    seenRoots.add(key)
+  for (const root of mergeDuplicateRoots(platform.roots)) {
+    seenRoots.add(canonical(root.path))
     const scanned = scanRoot(root)
     all.push(...scanned.entries)
     nested.push(...scanned.nested)
@@ -58,29 +56,53 @@ export function buildInventory(platform: PlatformInfo): Inventory {
   const ordered = valid
     .map((entry, index) => ({ entry, index }))
     .sort((a, b) => a.entry.root.rank - b.entry.root.rank || a.index - b.index)
+  // Collisions are per agent: Claude Code and Codex each load their own roots.
   const winners = new Map<string, SkillEntry>()
   const active: InstalledSkill[] = []
   const shadowed: InstalledSkill[] = []
   for (const { entry } of ordered) {
     const skill = entry.parse.skill
-    const winner = winners.get(skill.name)
+    const key = `${entry.root.agent ?? ''}\0${skill.name}`
+    const winner = winners.get(key)
     if (winner) {
       shadowed.push({ ...entry, skill, status: 'shadowed', shadowedBy: winner })
     } else {
-      winners.set(skill.name, entry)
+      winners.set(key, entry)
       active.push({ ...entry, skill, status: 'active' })
     }
   }
-  active.sort((a, b) => a.skill.name.localeCompare(b.skill.name))
+  active.sort((a, b) => a.skill.name.localeCompare(b.skill.name) || (a.root.agent ?? '').localeCompare(b.root.agent ?? ''))
 
+  const activeNames = new Set(active.map((s) => s.skill.name))
   const unscanned: Inventory['unscanned'] = []
   for (const root of platform.unscannedRoots) {
     if (seenRoots.has(canonical(root.path))) continue
     const { entries } = scanRoot({ path: root.path, source: root.source, rank: Number.MAX_SAFE_INTEGER })
-    const missing = entries.filter((e) => !e.parse.ok || !winners.has(e.parse.skill.name))
+    const missing = entries.filter((e) => !e.parse.ok || !activeNames.has(e.parse.skill.name))
     if (missing.length > 0) unscanned.push({ root, entries: missing })
   }
   return { platform, active, shadowed, dropped, nested, unscanned }
+}
+
+/**
+ * Run from a folder without .git (your home, which is also where dsh itself starts) and
+ * the "project" root is the user root: ~/.dsh/skills appears twice. Scan it once, keep the
+ * winning rank (dsh lets the rank-100 copy win), but label it with the user-level source,
+ * so the journal files it under the same partition no matter where you run from.
+ */
+export function mergeDuplicateRoots(roots: SkillRoot[]): SkillRoot[] {
+  const byPath = new Map<string, SkillRoot>()
+  for (const root of roots) {
+    const key = `${root.agent ?? ''}\0${canonical(root.path)}`
+    const prev = byPath.get(key)
+    if (!prev) {
+      byPath.set(key, root)
+      continue
+    }
+    const label = prev.source.startsWith('project-') && !root.source.startsWith('project-') ? root : prev
+    byPath.set(key, { ...label, rank: Math.min(prev.rank, root.rank), skipSystem: prev.skipSystem || root.skipSystem })
+  }
+  return [...byPath.values()]
 }
 
 function findNestedSkills(dir: string, depth: number): string[] {

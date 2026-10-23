@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/demo.gif" alt="skill-healthcheck demo: a skill's description changes upstream, and why attributes the behavior change" width="900">
+  <img src="https://raw.githubusercontent.com/lijiaqimun-coder/skill-healthcheck/main/docs/demo.gif" alt="skill-healthcheck demo: a skill's description changes upstream, and why attributes the behavior change" width="900">
 </p>
 
 > ¿Tu agente se ha vuelto más torpe últimamente? Puede ser ese skill que instalaste hace tres semanas.
@@ -29,33 +29,33 @@ Cuando un plugin se rompe, te enteras al instante: no instala, lanza errores, de
 Un comando, una revisión, una pantalla de salida. Solo lectura, y nunca se actualiza por su cuenta.
 
 ```text
-$ skill-healthcheck --lang en
-skill-healthcheck · DeepSeek Harness · profile desktop · 2026-10-23 18:57
-Host    dsh 0.2.1-rc.2 ✓
-Plugins  0: 0 ok · 0 upgradable · 0 broken  (+1 bundles)
-Skills  2: 2 ok · 0 update · 0 broken
-Summary: everything still works, nothing for you to do
-Recording started (2 events). Every run now saves what changed.
+$ skill-healthcheck
+skill-healthcheck · DeepSeek Harness · profile desktop · 2026-10-23 20:27
+Host     dsh 0.2.1-rc.2 ✓
+Plugins  0: 0 ok · 0 upgradable · 0 broken  +1 bundle
+Skills   2: 2 ok · 0 updated upstream · 0 broken
+Summary: everything still works; nothing for you to do
+Recording started (2 entries). Every run from now on records what changed.
 
-$ skill-healthcheck --lang en
-skill-healthcheck · DeepSeek Harness · profile desktop · 2026-10-23 18:57
-Host    dsh 0.2.1-rc.2 ✓
-Plugins  0: 0 ok · 0 upgradable · 0 broken  (+1 bundles)
-Skills  2: 1 ok · 1 update · 0 broken
-      ↑ zh-writer        Upstream changed the description: removed "paragraphs" "rewritten" "articles", added "professional" "marketing" "posts"  ⚠ critical
-Summary: 1 skill needs you to review it
+$ skill-healthcheck
+skill-healthcheck · DeepSeek Harness · profile desktop · 2026-10-23 20:27
+Host     dsh 0.2.1-rc.2 ✓
+Plugins  0: 0 ok · 0 upgradable · 0 broken  +1 bundle
+Skills   2: 1 ok · 1 updated upstream · 0 broken
+      ↑ zh-writer        upstream changed the description: removed "Chinese" "paragraphs" "rewritten"; added "professional" "marketing" "posts"  ⚠ critical
+Summary: 1 skill needs your review, one by one
 
-$ skill-healthcheck --lang en why "stopped replying in Chinese"
-why "stopped replying in Chinese" → reply language changed
-Onset: share of Chinese replies: ~100% before 2026-10-19, 0% that day (you were still asking in Chinese)
+$ skill-healthcheck why "stopped replying in Chinese"
+why "stopped replying in Chinese" → Reply language changed (no longer Chinese / mixed languages)
+Onset: share of Chinese in replies: ~100% before 2026-10-19, 0% that day (you kept asking in Chinese)
 1. doc-writer           the description the model sees changed on 2026-10-19
-     added "professional tone"
-     added "Always respond in English"
+     adds "professional tone"
+     adds "Always respond in English"
      removed "structured" "clearly"
 Ranked by time and keywords, not a verdict. Disable #1 first to confirm.
 ```
 
-(La salida de la herramienta está actualmente en chino; la salida en inglés está en la hoja de ruta.)
+La salida sigue el idioma de tu sistema; `--lang zh` o `--lang en` eligen uno.
 
 (La salida anterior es de una ejecución real de `npm run demo`: los dos skills vienen de repositorios git locales y el registro de sesión es sintético.)
 
@@ -67,51 +67,95 @@ Requiere Node.js 22.19+ y git.
 npm install -g skill-healthcheck
 ```
 
-Si todavía no está en npm, instala desde el código fuente:
+Desde el código fuente:
 
 ```bash
-git clone <this repo> && cd skill-healthcheck && npm install && npm run build && npm link
+git clone https://github.com/lijiaqimun-coder/skill-healthcheck && cd skill-healthcheck && npm install && npm run build && npm link
 ```
 
 ## Uso
 
-| Comando                                   | Qué hace                                                                                                                          |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `skill-healthcheck`                       | Revisión en una pantalla: host, plugins, skills                                                                                   |
-| `skill-healthcheck why "<síntoma>"`       | Retrocede por la línea de tiempo hasta los skills sospechosos, p. ej. `why "不用中文回答了"`; también acepta `--since 2026-10-01` |
-| `skill-healthcheck log`                   | Registro de qué se instaló, qué cambió y cuándo (`~` marca horas estimadas a partir de la fecha de los archivos)                  |
-| `skill-healthcheck ls`                    | Qué skills carga realmente la plataforma, cuáles están tapados y cuáles se descartan                                              |
-| `skill-healthcheck adopt <name> <origen>` | Registra el origen de un skill: `github:owner/repo/path`, una URL de GitHub o `<git-url>#<path>`                                  |
-| `skill-healthcheck record`                | Registra una única instantánea (para hooks y tareas programadas)                                                                  |
+| Comando | Qué hace |
+|---|---|
+| `skill-healthcheck` | Revisión en una pantalla: host, plugins, skills |
+| `skill-healthcheck why "<síntoma>"` | Retrocede por la línea de tiempo hasta los skills sospechosos, p. ej. `why "不用中文回答了"`; también acepta `--since 2026-10-01` |
+| `skill-healthcheck log` | Registro de qué se instaló, qué cambió y cuándo (`~` marca horas estimadas a partir de la fecha de los archivos) |
+| `skill-healthcheck ls` | Qué skills carga realmente la plataforma, cuáles están tapados y cuáles se descartan |
+| `skill-healthcheck adopt --repo <repo>` | Registra orígenes en bloque: empareja los skills locales con los del repositorio por nombre y contenido, p. ej. `--repo github:anthropics/skills` |
+| `skill-healthcheck adopt <name> <source>` | Registra el origen de un skill: `github:owner/repo/path`, una URL de GitHub o `<git-url>#<path>` |
+| `skill-healthcheck record` | Registra una única instantánea (para hooks y tareas programadas) |
 
-Opciones comunes: `--all` expandir todo, `--json` legible por máquina, `--offline` sin red, `--no-sessions` ignorar los registros de sesión, `--platform dsh|generic`, `--profile <nombre>`, `--cwd <directorio del proyecto>`.
+Opciones comunes: `--all` expandir todo, `--json` legible por máquina, `--offline` sin red, `--no-sessions` ignorar los registros de sesión, `--lang zh|en` idioma de salida (por defecto el locale del sistema; también `SKILL_HEALTHCHECK_LANG`), `--explain` una frase llana por cada cambio upstream (ver abajo), `--platform dsh|generic`, `--profile <nombre>`, `--cwd <directorio del proyecto>`.
 
-`check` devuelve el código de salida 1 cuando encuentra algo roto, así que encaja en CI.
+Códigos de salida: `0` todo bien (las actualizaciones disponibles cuentan como bien), `1` algo está roto (incluidos skills descartados, tapados o anidados demasiado profundo, y plugins rotos), `2` error de uso. Encaja directamente en CI. Cada hallazgo tiene un código estable para consumidores de `--json`: [docs/findings.md](docs/findings.md).
+
+¿Copiaste tus skills sin su `.git`? Ejecuta una vez `skill-healthcheck adopt --repo <el repositorio del que vinieron>` para que funcionen las comprobaciones upstream. Los skills cuya carpeta se renombró se emparejan por contenido.
+
+## Dentro de DeepSeek Harness
+
+El plugin complementario [`dsh-skill-healthcheck`](packages/dsh-skill-healthcheck) se ejecuta dentro de dsh:
+
+- registra una instantánea cada vez que arranca dsh, y otra siempre que dsh informa de que el catálogo de skills cambió, así el diario no tiene huecos mientras trabajas;
+- añade `/skill-healthcheck` al chat: la misma revisión de una pantalla, más `why <síntoma>`, `log` y `ls`.
+
+Instálalo desde la página Plugins de dsh, o:
+
+```bash
+dsh plugin --profile desktop add dsh-skill-healthcheck
+```
+
+## Con Claude Code y Codex
+
+Sin dsh, `skill-healthcheck` funciona en modo genérico. Lee los skills que cada agente carga realmente (Claude Code: `.claude/skills`, `~/.claude/skills`; Codex: `.codex/skills`, `.agents/skills`, `~/.agents/skills`, `$CODEX_HOME/skills`) y rellena el historial desde sus registros de sesión (`~/.claude/projects`, `~/.codex/sessions`): el catálogo de skills que vio el modelo a lo largo del tiempo, cada llamada a un skill y el idioma de las respuestas. Así que `why` también funciona ahí. Un skill instalado para ambos agentes no es un conflicto; dos copias con el mismo nombre para un mismo agente sí lo son.
+
+Para que el diario siga solo, registra al inicio de cada sesión de Claude Code con un hook en `~/.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "skill-healthcheck record" }] }]
+  }
+}
+```
+
+Para Codex, ejecuta `skill-healthcheck record` desde cron o el Programador de tareas una vez al día.
+
+## Opcional: `--explain`
+
+`--explain` añade una frase llana bajo cada cambio upstream ("ya no se elegirá para escribir en chino") y bajo el primer sospechoso de `why`. Está desactivado por defecto y nunca cambia un veredicto. Usa lo que tengas:
+
+| Entorno | Proveedor |
+|---|---|
+| `ANTHROPIC_API_KEY` (o `ANTHROPIC_AUTH_TOKEN`) | Claude, `claude-opus-5-5` con esfuerzo bajo, mediante el SDK oficial, con fallback en el servidor ante rechazos |
+| `DEEPSEEK_API_KEY` | DeepSeek, `deepseek-chat` |
+| `SKILL_HEALTHCHECK_LLM_BASE_URL` + `SKILL_HEALTHCHECK_LLM_API_KEY` | cualquier endpoint compatible con OpenAI (Ollama, vLLM, …) |
+
+`SKILL_HEALTHCHECK_LLM` elige uno explícitamente y `SKILL_HEALTHCHECK_LLM_MODEL` cambia el modelo. Solo se envían el texto antes/después del skill y las palabras detectadas, nunca los registros de sesión. El texto del skill se delimita como datos no confiables, las respuestas se recortan a una línea y las respuestas se cachean.
 
 ## Qué revisa
 
 **Skills: local (sin conexión, determinista)**
 
-| Problema                                                                                                | Por qué falla en silencio                                                                                               |
-| ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| frontmatter inválido (name no está en kebab-case, un booleano mal escrito, un campo con nombre antiguo) | dsh descarta el skill entero y solo escribe una línea de advertencia en el log                                          |
-| Tapado por otro skill con el mismo nombre                                                               | Un skill con el mismo nombre en `.dsh/skills` del proyecto tapa el que instalaste globalmente                           |
-| Anidado demasiado profundo                                                                              | Solo se reconoce `<root>/<name>/SKILL.md`; si clonas un repositorio de skills completo ahí dentro, no se activa ninguno |
-| Directorio equivocado                                                                                   | dsh no escanea `~/.claude/skills` ni `~/.codex/skills`                                                                  |
-| description de más de 500 caracteres                                                                    | Se trunca en el catálogo, así que el modelo nunca ve las palabras de activación del final                               |
-| Antes se invocaba a menudo y un día dejó de hacerlo                                                     | La evidencia del registro de sesión vale más que cualquier inferencia                                                   |
+| Problema | Por qué falla en silencio |
+|---|---|
+| frontmatter inválido (name no está en kebab-case, un booleano mal escrito, un campo con nombre antiguo) | dsh descarta el skill entero y solo escribe una línea de advertencia en el log |
+| Tapado por otro skill con el mismo nombre | Un skill con el mismo nombre en `.dsh/skills` del proyecto tapa el que instalaste globalmente |
+| Anidado demasiado profundo | Solo se reconoce `<root>/<name>/SKILL.md`; si clonas un repositorio de skills completo ahí dentro, no se activa ninguno |
+| Directorio equivocado | dsh no escanea `~/.claude/skills` ni `~/.codex/skills` |
+| description de más de 500 caracteres | Se trunca en el catálogo, así que el modelo nunca ve las palabras de activación del final |
+| Antes se invocaba a menudo y un día dejó de hacerlo | La evidencia del registro de sesión vale más que cualquier inferencia |
 
 **Skills: upstream (git, cualquier plataforma de alojamiento)**
 
-| Cambio upstream                               | Impacto                                                                                                                                                                       |
-| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `description` modificada                      | ⚠ Riesgo máximo: cambiaron las condiciones de activación y puede que nunca se vuelva a invocar. Enumera las palabras eliminadas y añadidas, y marca las reglas de idioma/tono |
-| `name` modificado / directorio movido         | El punto de entrada `/nombre-antiguo` deja de funcionar; te indica el nuevo                                                                                                   |
-| Repositorio borrado / skill borrado           | Tu copia local queda sin mantenimiento (solo un 404 explícito cuenta como borrado; los fallos de red se reportan como "no se pudo comprobar")                                 |
-| Nuevo ejecutable en `scripts/`                | Alguien tiene que revisar el código                                                                                                                                           |
-| description más larga o por encima del límite | Se trunca, o consume más contexto en cada turno                                                                                                                               |
-| Cuerpo más largo                              | Cuántos tokens extra cuesta cada invocación (el cuerpo se carga bajo demanda, así que no desplaza a otros skills)                                                             |
-| Nueva sintaxis específica de plataforma       | Cmdlets de PowerShell, `brew`, `/usr/bin`, por ejemplo: puede que no funcione en tu sistema                                                                                   |
+| Cambio upstream | Impacto |
+|---|---|
+| `description` modificada | ⚠ Riesgo máximo: cambiaron las condiciones de activación y puede que nunca se vuelva a invocar. Enumera las palabras eliminadas y añadidas, y marca las reglas de idioma/tono |
+| `name` modificado / directorio movido | El punto de entrada `/nombre-antiguo` deja de funcionar; te indica el nuevo |
+| Repositorio borrado / skill borrado | Tu copia local queda sin mantenimiento (solo un 404 explícito cuenta como borrado; los fallos de red se reportan como "no se pudo comprobar") |
+| Nuevo ejecutable en `scripts/` | Alguien tiene que revisar el código |
+| description más larga o por encima del límite | Se trunca, o consume más contexto en cada turno |
+| Cuerpo más largo | Cuántos tokens extra cuesta cada invocación (el cuerpo se carga bajo demanda, así que no desplaza a otros skills) |
+| Nueva sintaxis específica de plataforma | Cmdlets de PowerShell, `brew`, `/usr/bin`, por ejemplo: puede que no funcione en tu sistema |
 
 **Plugins (dsh)**: si los plugins instalados en un profile son compatibles con la versión actual de dsh (`engines.dsh` / peerDependencies), si funcionan gracias a una excepción de versión, si npm tiene una versión más nueva y si el autor los ha marcado como obsoletos.
 
@@ -131,12 +175,12 @@ Todo es código determinista sin llamadas a un LLM, así que los resultados son 
 
 Reunimos 74 cambios reales de `SKILL.md` de 15 repositorios públicos de skills (anthropics/skills, obra/superpowers, vercel-labs/agent-skills, deepseek-ai/deepseek-harness, entre otros) y aplicamos las reglas a cada uno:
 
-| Tipo de cambio         | Detectados / reales |
-| ---------------------- | ------------------: |
-| description modificada |             44 / 44 |
-| name modificado        |             18 / 18 |
-| directorio movido      |             20 / 20 |
-| scripts añadidos       |             13 / 13 |
+| Tipo de cambio | Detectados / reales |
+|---|---:|
+| description modificada | 44 / 44 |
+| name modificado | 18 / 18 |
+| directorio movido | 20 / 20 |
+| scripts añadidos | 13 / 13 |
 
 En este conjunto, 37 cambios upstream eliminaron palabras que estaban en la description, 16 renombraron el skill y 3 produjeron una versión nueva que dsh descarta directamente. El conjunto de datos, los pasos de reproducción y el ajuste de reglas están en [research/EVAL.md](research/EVAL.md).
 
@@ -145,14 +189,16 @@ En este conjunto, 37 cambios upstream eliminaron palabras que estaban en la desc
 - Solo lee tus directorios de skills, los profiles de dsh y los registros de sesión; no escribe nada fuera de `~/.skill-healthcheck/`.
 - Los registros de sesión se leen únicamente en local, y solo se cachean datos derivados (catálogo de skills, número de invocaciones, proporción diaria de respuestas en chino). El texto de las conversaciones nunca se almacena.
 - Las comprobaciones upstream se ejecutan en repositorios bare independientes bajo `~/.skill-healthcheck/cache/`; nunca hace fetch ni modifica tus propios repositorios de skills.
-- El acceso a la red hace exactamente tres cosas: `git fetch` de los upstreams de skills, consultar la API de GitHub para saber si un repositorio existe y `npm view` para las versiones de los plugins. `--offline` lo desactiva todo.
+- El `metadata.source` del frontmatter de un skill lo escribe un tercero, así que se trata como no confiable: solo se aceptan URLs https/ssh/git/file y rutas absolutas, se rechazan inyecciones de opciones como `--upload-pack=…` y transportes como `ext::`, y git nunca pide credenciales.
+- El acceso a la red hace exactamente tres cosas por defecto: `git fetch` de los upstreams de skills, consultar la API de GitHub para saber si un repositorio existe y `npm view` para las versiones de los plugins. `--offline` lo desactiva todo. `--explain` añade una cuarta, solo cuando lo pasas: el texto antes/después del skill va al proveedor de LLM que hayas configurado.
+- Los registros de sesión de más de 180 días se omiten (`SKILL_HEALTHCHECK_SESSION_DAYS` lo cambia). Para olvidarlo todo, borra `~/.skill-healthcheck/`.
 
 ## Plataformas compatibles
 
-| Plataforma                                        | Nivel de soporte                                                                                                               |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| DeepSeek Harness (dsh)                            | Completo: replica el orden de escaneo y las reglas de análisis de dsh, rellena los registros de sesión y revisa plugins y host |
-| Agent Skills genéricos (Claude Code, Codex, etc.) | Escanea `.agents/skills`, `.claude/skills`, `~/.codex/skills` y ejecuta comprobaciones locales y upstream                      |
+| Plataforma | Nivel de soporte |
+|---|---|
+| DeepSeek Harness (dsh) | Completo: replica el orden de escaneo y las reglas de análisis de dsh, rellena los registros de sesión y revisa plugins y host |
+| Claude Code y Codex (modo genérico) | Raíces de skills propias de cada agente, comprobaciones locales y upstream, relleno desde los registros de ambos agentes |
 
 Cambia automáticamente al modo dsh cuando detecta `~/.dsh/profiles`; también puedes fijarlo con `--platform`.
 
@@ -168,7 +214,7 @@ dsh no registra de dónde se instaló un skill, así que la herramienta prueba e
 
 ```bash
 npm install
-npm test        # vitest: parsing, discovery, journal, impact rules, upstream (local bare repos), attribution, lexicon
+npm test        # vitest: parsing, discovery, journal, impact rules, upstream (local bare repos), attribution, i18n, dsh plugin
 npm run demo    # 15-second demo, runs entirely inside demo/.sandbox
 node scripts/corpus-eval.mjs   # run the impact rules over 74 real changes (build first; fetches files from GitHub)
 ```
@@ -177,11 +223,12 @@ node scripts/corpus-eval.mjs   # run the impact rules over 74 real changes (buil
 
 - [x] Diario, comprobaciones locales de fallo silencioso, relleno de registros de sesión
 - [x] Comprobación de vida del upstream y evaluación del impacto de cambios
-- [x] Atribución con `why` (versión mínima)
+- [x] Atribución con `why`
 - [x] Compatibilidad de plugins y comprobación de actualizaciones (dsh)
-- [ ] Shell de plugin de dsh `dsh-skill-healthcheck`: registrar al arrancar el host, vigilar cambios de skills, exponer `/skill-healthcheck`
-- [ ] `--explain` opcional: usar un LLM para convertir el diff en una frase llana (desactivado por defecto)
-- [x] Salida en inglés (`--lang en`)
+- [x] Plugin de dsh `dsh-skill-healthcheck`: registra al arrancar el host y al cambiar el catálogo, añade `/skill-healthcheck`
+- [x] Salida en chino e inglés (`--lang`)
+- [x] `--explain` opcional: una frase por cambio desde Claude, DeepSeek o cualquier modelo compatible con OpenAI
+- [x] Relleno de registros de sesión de Claude Code y Codex
 
 ## License
 

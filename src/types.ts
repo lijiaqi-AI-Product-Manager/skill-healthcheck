@@ -1,4 +1,5 @@
 import type { ParseResult, ParsedSkill } from './frontmatter.js'
+import type { SessionSource } from './sessions.js'
 
 export interface SkillRoot {
   path: string
@@ -9,12 +10,15 @@ export interface SkillRoot {
   skipSystem?: boolean
   /** Shipped with the host; never checked against an upstream. */
   bundled?: boolean
+  /** Which agent reads this root (generic mode). Name collisions only matter within one agent. */
+  agent?: string
 }
 
 export interface UnscannedRoot {
   path: string
   source: string
-  why: string
+  /** Short display form of the path for messages, e.g. ~/.claude/skills. */
+  label: string
 }
 
 export interface HostStatus {
@@ -37,7 +41,8 @@ export interface PlatformInfo {
   dshHome?: string
   profile?: string
   profileDir?: string
-  sessionsDir?: string
+  /** Where this platform's agents keep session logs, for backfill. */
+  sessionSources: SessionSource[]
 }
 
 export interface SkillEntry {

@@ -23,3 +23,7 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: node demo/run.mjs --fast
+      - name: Package contents
+        run: |
+          npm pack --dry-run
+          npm pack --dry-run ./packages/dsh-skill-healthcheck

@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/demo.gif" alt="skill-healthcheck 演示：上游改了 description，why 把行为变化归因到具体 skill" width="900">
+  <img src="https://raw.githubusercontent.com/lijiaqimun-coder/skill-healthcheck/main/docs/demo.gif" alt="skill-healthcheck 演示：上游改了 description，why 把行为变化归因到具体 skill" width="900">
 </p>
 
 > 你的 agent 最近变笨了？可能是三周前装的那个 skill。
@@ -29,33 +29,33 @@
 一个命令、一次体检、一屏输出。它只读不写，从不自动更新。
 
 ```text
-$ skill-healthcheck --lang en
-skill-healthcheck · DeepSeek Harness · profile desktop · 2026-10-23 18:57
-Host    dsh 0.2.1-rc.2 ✓
-Plugins  0: 0 ok · 0 upgradable · 0 broken  (+1 bundles)
-Skills  2: 2 ok · 0 update · 0 broken
-Summary: everything still works, nothing for you to do
-Recording started (2 events). Every run now saves what changed.
+$ skill-healthcheck
+skill-healthcheck · DeepSeek Harness · profile desktop · 2026-10-23 20:28
+宿主  dsh 0.2.1-rc.2 ✓
+插件  0：0 正常 · 0 可升级 · 0 失效  另有组合包 1 个
+技能  2：2 正常 · 0 有更新 · 0 失效
+结论：都还在正常工作，没有需要你处理的
+已开始记录（2 条）。以后每次运行都会记下变化。
 
-$ skill-healthcheck --lang en
-skill-healthcheck · DeepSeek Harness · profile desktop · 2026-10-23 18:57
-Host    dsh 0.2.1-rc.2 ✓
-Plugins  0: 0 ok · 0 upgradable · 0 broken  (+1 bundles)
-Skills  2: 1 ok · 1 update · 0 broken
-      ↑ zh-writer        Upstream changed the description: removed "paragraphs" "rewritten" "articles", added "professional" "marketing" "posts"  ⚠ critical
-Summary: 1 skill needs you to review it
+$ skill-healthcheck
+skill-healthcheck · DeepSeek Harness · profile desktop · 2026-10-23 20:28
+宿主  dsh 0.2.1-rc.2 ✓
+插件  0：0 正常 · 0 可升级 · 0 失效  另有组合包 1 个
+技能  2：1 正常 · 1 有更新 · 0 失效
+      ↑ zh-writer        上游改了 description：删去 "Chinese" "paragraphs" "rewritten"，新增 "professional" "marketing" "posts"  ⚠最高危
+结论：技能 1 个需你逐个确认
 
-$ skill-healthcheck --lang en why "stopped replying in Chinese"
-why "stopped replying in Chinese" → reply language changed
-Onset: share of Chinese replies: ~100% before 2026-10-19, 0% that day (you were still asking in Chinese)
-1. doc-writer           the description the model sees changed on 2026-10-19
-     added "professional tone"
-     added "Always respond in English"
-     removed "structured" "clearly"
-Ranked by time and keywords, not a verdict. Disable #1 first to confirm.
+$ skill-healthcheck why "为什么它现在不用中文回答我了"
+why "为什么它现在不用中文回答我了" → 回复语言变了（不用中文 / 中英混杂）
+现象起点：助手回复的中文占比：2026-10-19 之前约 100%，当天 0%（你仍在用中文提问）
+1. doc-writer           2026-10-19 起模型看到的 description 变了
+     新增"professional tone"
+     新增"Always respond in English"
+     删去 "structured" "clearly"
+这是按时间和关键词排的嫌疑顺序，不是定论；可以先停用第 1 名验证。
 ```
 
-（上面是 `npm run demo` 的真实输出：两个技能来自本地 git 仓库，会话日志是合成的。）
+输出语言跟随系统，`--lang zh` 或 `--lang en` 可以指定。（上面是 `npm run demo -- --lang zh` 的真实输出：两个技能来自本地 git 仓库，会话日志是合成的。）
 
 ## 安装
 
@@ -65,7 +65,7 @@ Ranked by time and keywords, not a verdict. Disable #1 first to confirm.
 npm install -g skill-healthcheck
 ```
 
-还没发布到 npm 时，从源码安装：
+从源码安装：
 
 ```bash
 git clone https://github.com/lijiaqimun-coder/skill-healthcheck && cd skill-healthcheck && npm install && npm run build && npm link
@@ -83,11 +83,60 @@ git clone https://github.com/lijiaqimun-coder/skill-healthcheck && cd skill-heal
 | `skill-healthcheck adopt <name> <来源>` | 登记单个技能来源：`github:owner/repo/path`、GitHub 链接或 `<git-url>#<path>`                   |
 | `skill-healthcheck record`              | 只记录一次快照（给钩子、定时任务用）                                                           |
 
-通用选项：`--all` 展开全部、`--json` 机器可读、`--offline` 不联网、`--no-sessions` 不读会话日志、`--platform dsh|generic`、`--profile <名字>`、`--cwd <项目目录>`。
+通用选项：`--all` 展开全部、`--json` 机器可读、`--offline` 不联网、`--no-sessions` 不读会话日志、`--lang zh|en` 输出语言（默认跟随系统，也可以用环境变量 `SKILL_HEALTHCHECK_LANG`）、`--explain` 给每个上游改动加一句人话解读（见下文）、`--platform dsh|generic`、`--profile <名字>`、`--cwd <项目目录>`。
 
-退出码：`0` 一切正常（有更新也算正常），`1` 有失效项（包括被丢弃、被遮蔽、嵌套太深的技能和失效插件），`2` 用法错误。可以直接放进 CI。
+退出码：`0` 一切正常（有更新也算正常），`1` 有失效项（包括被丢弃、被遮蔽、嵌套太深的技能和失效插件），`2` 用法错误。可以直接放进 CI。每种发现都有固定的代码，方便用 `--json` 做二次开发：[docs/findings.md](docs/findings.md)。
 
 技能是复制过来的、没有 `.git`？先跑一次 `skill-healthcheck adopt --repo <它来自的仓库>`，上游检查才能生效。目录被改名的技能也能按内容找回来。
+
+## 在 DeepSeek Harness 里用
+
+配套插件 [`dsh-skill-healthcheck`](packages/dsh-skill-healthcheck) 运行在 dsh 内部：
+
+- dsh 每次启动都会记录一次快照，dsh 报告技能目录变化时再记一次，你用 dsh 的期间记录不会断；
+- 在聊天里增加 `/skill-healthcheck` 命令：同样的一屏体检，另外支持 `why <现象>`、`log`、`ls`。
+
+在 dsh 的插件页安装，或者：
+
+```bash
+dsh plugin --profile desktop add dsh-skill-healthcheck
+```
+
+## 在 Claude Code 和 Codex 里用
+
+没有 dsh 时，`skill-healthcheck` 以通用模式运行：
+
+- **只看各个 agent 实际会加载的技能目录**。Claude Code 是 `.claude/skills`、`~/.claude/skills`；Codex 是 `.codex/skills`、`.agents/skills`、`~/.agents/skills`、`$CODEX_HOME/skills`。
+- **从它们的会话日志里回填历史**（`~/.claude/projects`、`~/.codex/sessions`）：模型每次看到的技能目录、每一次技能调用、回复用的语言。所以 `why` 在这两个平台上也能用。
+- **同名冲突只在同一个 agent 内部算**。同一个技能给两个 agent 各装一份，不算冲突；同一个 agent 下有两份同名技能才算。
+
+想让记录自动持续，可以在 `~/.claude/settings.json` 里加一个钩子，每次 Claude Code 会话开始时记录一次：
+
+```json
+{
+  "hooks": {
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "skill-healthcheck record" }] }]
+  }
+}
+```
+
+Codex 可以用 cron 或 Windows 任务计划程序，每天运行一次 `skill-healthcheck record`。
+
+## 可选：`--explain`
+
+`--explain` 会在每个上游改动下面、以及 `why` 排第一的嫌疑项下面，加一句人话解读（比如"它以后不会再被用于中文写作"）。默认关闭，也不会影响任何结论。按你已有的配置选择模型：
+
+| 环境变量 | 使用的模型 |
+|---|---|
+| `ANTHROPIC_API_KEY`（或 `ANTHROPIC_AUTH_TOKEN`） | Claude `claude-opus-5-5`，低推理强度，通过官方 SDK 调用，被安全策略拒绝时自动换模型重试 |
+| `DEEPSEEK_API_KEY` | DeepSeek `deepseek-chat` |
+| `SKILL_HEALTHCHECK_LLM_BASE_URL` + `SKILL_HEALTHCHECK_LLM_API_KEY` | 任意 OpenAI 兼容接口（Ollama、vLLM 等） |
+
+可以用 `SKILL_HEALTHCHECK_LLM` 指定用哪一个，用 `SKILL_HEALTHCHECK_LLM_MODEL` 换模型。
+
+- **发送的内容**：只有技能改动前后的文本和检测到的词，绝不发送会话日志。
+- **防护**：技能文本作为不可信数据隔离起来，回复会被截成一行。
+- **缓存**：同样的改动只调用一次。
 
 ## 它检查什么
 
@@ -147,14 +196,15 @@ git clone https://github.com/lijiaqimun-coder/skill-healthcheck && cd skill-heal
 - 会话日志只在本地读，只缓存派生数据（技能目录、调用次数、每天的中文占比），不保存对话原文。
 - 上游检查在 `~/.skill-healthcheck/cache/` 的独立裸仓库里进行，不会 fetch 或修改你自己的技能仓库。
 - 技能 frontmatter 里的 `metadata.source` 是第三方写的，一律当作不可信输入：只接受 https/ssh/git/file 地址和绝对路径，拒绝 `--upload-pack=…` 这类参数注入和 `ext::` 等传输方式，git 不会弹出任何认证提示。
-- 联网只做三件事：`git fetch` 技能上游、GitHub API 确认仓库是否存在、`npm view` 查插件版本。`--offline` 全部关闭。
+- 默认联网只做三件事：`git fetch` 技能上游、GitHub API 确认仓库是否存在、`npm view` 查插件版本。`--offline` 全部关闭。只有加了 `--explain` 才会多一件：把技能改动前后的文本发给你配置的大模型。
+- 默认跳过 180 天以前的会话日志（用 `SKILL_HEALTHCHECK_SESSION_DAYS` 调整）。想清空所有记录，删除 `~/.skill-healthcheck/` 即可。
 
 ## 平台支持
 
 | 平台                                       | 支持程度                                                                         |
 | ------------------------------------------ | -------------------------------------------------------------------------------- |
 | DeepSeek Harness（dsh）                    | 完整：照搬 dsh 的扫描顺序和解析规则、会话日志回填、插件和宿主检查                |
-| 通用 Agent Skills（Claude Code、Codex 等） | 扫描 `.agents/skills`、`.claude/skills`、`~/.codex/skills`，做本地检查和上游检查 |
+| Claude Code 和 Codex（通用模式） | 按各自的技能目录做本地检查和上游检查，并从两者的会话日志回填历史 |
 
 检测到 `~/.dsh/profiles` 时自动进入 dsh 模式，也可以用 `--platform` 指定。
 
@@ -170,7 +220,7 @@ dsh 本身不记录技能是从哪装的，所以按这个顺序找，找不到�
 
 ```bash
 npm install
-npm test        # vitest：解析规则、发现规则、记录器、影响规则、上游（本地裸仓库）、归因、词典
+npm test        # vitest：解析规则、发现规则、记录器、影响规则、上游（本地裸仓库）、归因、中英文输出、dsh 插件
 npm run demo    # 15 秒演示，全部在 demo/.sandbox 里进行
 node scripts/corpus-eval.mjs   # 在 74 条真实变更上跑影响规则（需要先 build，会联网取文件）
 ```
@@ -179,11 +229,12 @@ node scripts/corpus-eval.mjs   # 在 74 条真实变更上跑影响规则（需�
 
 - [x] 记录器、本地静默失效检查、会话日志回填
 - [x] 上游存活检查与变更影响评估
-- [x] `why` 归因（最小版本）
+- [x] `why` 归因
 - [x] 插件兼容性与可升级检查（dsh）
-- [ ] dsh 插件外壳 `dsh-skill-healthcheck`：宿主启动时记录、监听技能变化、提供 `/skill-healthcheck`
-- [ ] 可选 `--explain`：用 LLM 把 diff 翻成一句人话（默认关闭）
-- [x] 英文输出（`--lang en`）
+- [x] dsh 插件 `dsh-skill-healthcheck`：宿主启动和技能目录变化时记录，提供 `/skill-healthcheck`
+- [x] 中英文输出（`--lang`）
+- [x] 可选 `--explain`：用 Claude、DeepSeek 或任意 OpenAI 兼容模型，把每个改动翻成一句人话
+- [x] Claude Code 和 Codex 的会话日志回填
 
 ## License
 

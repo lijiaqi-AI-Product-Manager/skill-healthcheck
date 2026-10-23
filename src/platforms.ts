@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { parse } from 'yaml'
 import { agentsHome, dshHome, userHome } from './env.js'
+import { t } from './i18n.js'
 import type { HostStatus, PlatformInfo, SkillRoot, UnscannedRoot } from './types.js'
 
 export type PlatformId = 'dsh' | 'generic'
@@ -54,9 +55,9 @@ function dshPlatform(cwd: string, profileOption?: string): PlatformInfo {
   if (bundled) roots.push({ path: bundled, source: 'bundled', rank: BUNDLED_RANK, bundled: true })
 
   const unscannedRoots: UnscannedRoot[] = [
-    { path: join(userHome(), '.claude', 'skills'), source: 'claude-user', why: 'dsh 不扫描 ~/.claude/skills' },
-    { path: join(projectRoot, '.claude', 'skills'), source: 'claude-project', why: 'dsh 不扫描项目的 .claude/skills' },
-    { path: join(userHome(), '.codex', 'skills'), source: 'codex-user', why: 'dsh 不扫描 ~/.codex/skills' },
+    { path: join(userHome(), '.claude', 'skills'), source: 'claude-user', label: '~/.claude/skills' },
+    { path: join(projectRoot, '.claude', 'skills'), source: 'claude-project', label: '.claude/skills' },
+    { path: join(userHome(), '.codex', 'skills'), source: 'codex-user', label: '~/.codex/skills' },
   ]
   return {
     id: 'dsh',
@@ -70,29 +71,38 @@ function dshPlatform(cwd: string, profileOption?: string): PlatformInfo {
     dshHome: home,
     profile,
     profileDir,
-    sessionsDir: join(home, 'sessions'),
+    sessionSources: [{ dir: join(home, 'sessions'), format: 'dsh' }],
   }
 }
 
 function genericPlatform(cwd: string): PlatformInfo {
   const projectRoot = findProjectRoot(cwd)
   const home = userHome()
-  // No single precedence rule across agents; project before user, .agents before .claude.
+  const codexHome = process.env.CODEX_HOME ? resolve(process.env.CODEX_HOME) : join(home, '.codex')
+  // Each agent reads its own roots, so a skill installed for both is not a conflict.
+  // Claude Code: project .claude/skills, ~/.claude/skills.
+  // Codex (codex-rs ext/skills host_roots.rs): project .codex/skills and .agents/skills,
+  // ~/.agents/skills, $CODEX_HOME/skills (its .system folder is Codex's own cache).
   const roots: SkillRoot[] = [
-    { path: join(projectRoot, '.agents', 'skills'), source: 'project-agents', rank: 100 },
-    { path: join(projectRoot, '.claude', 'skills'), source: 'project-claude', rank: 150 },
-    { path: join(agentsHome(), 'skills'), source: 'user-agents', rank: 400 },
-    { path: join(home, '.claude', 'skills'), source: 'user-claude', rank: 450 },
-    { path: join(home, '.codex', 'skills'), source: 'user-codex', rank: 470 },
+    { path: join(projectRoot, '.claude', 'skills'), source: 'project-claude', rank: 100, agent: 'claude-code' },
+    { path: join(home, '.claude', 'skills'), source: 'user-claude', rank: 400, agent: 'claude-code' },
+    { path: join(projectRoot, '.codex', 'skills'), source: 'project-codex', rank: 100, agent: 'codex' },
+    { path: join(projectRoot, '.agents', 'skills'), source: 'project-agents', rank: 110, agent: 'codex' },
+    { path: join(agentsHome(), 'skills'), source: 'user-agents', rank: 400, agent: 'codex' },
+    { path: join(codexHome, 'skills'), source: 'user-codex', rank: 410, agent: 'codex', skipSystem: true },
   ]
   return {
     id: 'generic',
-    label: '通用 Agent Skills',
+    label: t('r.genericLabel'),
     cwd,
     projectRoot,
     roots,
     unscannedRoots: [],
-    host: { name: '通用模式', ok: true, detail: '未检测到 dsh，只做技能检查' },
+    host: { name: t('r.hostGeneric'), ok: true, detail: t('r.hostGenericDetail') },
+    sessionSources: [
+      { dir: join(home, '.claude', 'projects'), format: 'claude-code' },
+      { dir: join(process.env.CODEX_HOME ? resolve(process.env.CODEX_HOME) : join(home, '.codex'), 'sessions'), format: 'codex' },
+    ],
   }
 }
 
@@ -148,15 +158,15 @@ function dshInstallDirs(): string[] {
 function dshHostStatus(home: string, profileDir: string | undefined): HostStatus {
   const version = readRuntimeVersion(home)
   if (!profileDir || !isDir(profileDir)) {
-    return { name: 'dsh', version, ok: false, detail: '找不到 profile 目录' }
+    return { name: 'dsh', version, ok: false, detail: t('host.noProfile') }
   }
   const pkgFile = join(profileDir, 'package.json')
   try {
     JSON.parse(readFileSync(pkgFile, 'utf8'))
   } catch {
-    return { name: 'dsh', version, ok: false, detail: `profile 的 package.json 无法解析：${pkgFile}` }
+    return { name: 'dsh', version, ok: false, detail: t('host.badPackage', pkgFile) }
   }
-  if (!version) return { name: 'dsh', ok: false, detail: '读不到 dsh 运行时版本' }
+  if (!version) return { name: 'dsh', ok: false, detail: t('host.noVersion') }
   return { name: 'dsh', version, ok: true }
 }
 

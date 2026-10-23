@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "sources": "symptoms and platform_tokens drafted by DSH (research/lexicon.json), merged and pruned for false positives",
   "symptoms": [
     {
@@ -53,7 +53,9 @@
           "(默认|一律|始终|必须).{0,4}(使用|用|说|输出)(英文|英语)"
         ]
       },
-      "explain_zh": "技能里要求「用英文回答 / 使用英文术语」或把语言写死的规则，会压过用户的语言偏好。"
+      "explain_zh": "技能里要求「用英文回答 / 使用英文术语」或把语言写死的规则，会压过用户的语言偏好。",
+      "title_en": "Reply language changed (no longer Chinese / mixed languages)",
+      "explain_en": "Rules that demand English replies or English terminology, or hard-code a language, override the user’s language preference."
     },
     {
       "id": "tone",
@@ -107,7 +109,9 @@
           "(保持|使用|采用).{0,4}(专业|正式|亲切|冷淡).{0,3}(语气|口吻)"
         ]
       },
-      "explain_zh": "给技能加了「保持专业/正式语气」「不要寒暄」这类风格要求，会让回答突然变得官方或生硬。"
+      "explain_zh": "给技能加了「保持专业/正式语气」「不要寒暄」这类风格要求，会让回答突然变得官方或生硬。",
+      "title_en": "Tone or formality changed (too formal / too wordy / too casual)",
+      "explain_en": "Style rules such as \"keep a professional tone\" or \"no pleasantries\" make answers suddenly formal or stiff."
     },
     {
       "id": "length",
@@ -156,7 +160,9 @@
           "(回答|回复|输出).{0,6}(不超过|控制在|限制在).{0,6}(字|词|行)"
         ]
       },
-      "explain_zh": "「简短回答 / 不超过 N 字 / 只给一段」这类长度约束，会直接改变输出的详略程度。"
+      "explain_zh": "「简短回答 / 不超过 N 字 / 只给一段」这类长度约束，会直接改变输出的详略程度。",
+      "title_en": "Answer length changed (longer / shorter)",
+      "explain_en": "Length limits such as \"be brief\", \"under N words\" or \"one paragraph\" directly change how detailed the output is."
     },
     {
       "id": "format",
@@ -206,7 +212,9 @@
           "(用|使用|不要用|避免|改成).{0,3}(表格|emoji|小标题|列表|纯文本)"
         ]
       },
-      "explain_zh": "技能里写死「用表格 / 加 emoji / 用小标题 / 只输出纯文本」，会整体换掉输出的排版习惯。"
+      "explain_zh": "技能里写死「用表格 / 加 emoji / 用小标题 / 只输出纯文本」，会整体换掉输出的排版习惯。",
+      "title_en": "Output format changed (tables / emoji / headings / no code blocks)",
+      "explain_en": "Hard-coded formatting such as \"use tables\", \"add emoji\", \"use headings\" or \"plain text only\" replaces the usual layout."
     },
     {
       "id": "asks-too-many-questions",
@@ -243,7 +251,9 @@
           "(先|并|要|需).{0,4}(向)?用户(确认|询问|提问)"
         ]
       },
-      "explain_zh": "新增「先向用户确认 / 等用户批准」的规则，会让 agent 从直接动手变成反复追问。"
+      "explain_zh": "新增「先向用户确认 / 等用户批准」的规则，会让 agent 从直接动手变成反复追问。",
+      "title_en": "Asks too many questions, hesitates to act",
+      "explain_en": "New rules such as \"confirm with the user first\" or \"wait for approval\" turn direct action into repeated questions."
     },
     {
       "id": "acts-without-confirmation",
@@ -280,7 +290,9 @@
           "(无需|不用|不必).{0,3}(确认|询问|征求)|直接(执行|动手|修改)"
         ]
       },
-      "explain_zh": "「无需确认、直接执行、自主推进」这类规则，会让 agent 跳过原本会先问一句的步骤。"
+      "explain_zh": "「无需确认、直接执行、自主推进」这类规则，会让 agent 跳过原本会先问一句的步骤。",
+      "title_en": "Acts without asking first",
+      "explain_en": "Rules such as \"no need to confirm\", \"just do it\" or \"proceed autonomously\" skip the question the agent used to ask."
     },
     {
       "id": "skips-tests",
@@ -314,7 +326,9 @@
           "(跳过|省略|不用跑|不必跑).{0,3}(测试|验证|检查)"
         ]
       },
-      "explain_zh": "正文里出现「跳过测试 / 不必验证」的口径，会让 agent 交付未经验证的结果却仍说完成。"
+      "explain_zh": "正文里出现「跳过测试 / 不必验证」的口径，会让 agent 交付未经验证的结果却仍说完成。",
+      "title_en": "Skips tests or verification",
+      "explain_en": "Wording such as \"skip tests\" or \"no need to verify\" leads to unverified results reported as done."
     },
     {
       "id": "file-sprawl",
@@ -351,7 +365,9 @@
           "(生成|写|创建|产出|保存).{0,4}(报告|总结|文档|说明|清单|文件)"
         ]
       },
-      "explain_zh": "「顺手写一份报告/总结/README」这类要求，会让每次任务都在仓库里多出文件。"
+      "explain_zh": "「顺手写一份报告/总结/README」这类要求，会让每次任务都在仓库里多出文件。",
+      "title_en": "Creates extra files and documents",
+      "explain_en": "Requests such as \"also write a report/summary/README\" leave extra files in the repo after every task."
     },
     {
       "id": "git-behavior",
@@ -386,7 +402,9 @@
           "自动提交|提交信息(格式)?|提交(一次|一个)commit"
         ]
       },
-      "explain_zh": "技能里写了 git 提交动作或 commit message 规范，agent 就会开始自行提交、或把提交信息改成统一格式。"
+      "explain_zh": "技能里写了 git 提交动作或 commit message 规范，agent 就会开始自行提交、或把提交信息改成统一格式。",
+      "title_en": "git behavior changed (auto-commits / commit message format)",
+      "explain_en": "A skill that mentions committing or a commit message convention makes the agent commit on its own or reformat messages."
     },
     {
       "id": "code-style",
@@ -418,7 +436,9 @@
           "(添加|写|补).{0,4}注释|命名(规范|风格|约定)"
         ]
       },
-      "explain_zh": "「加注释 / 统一命名 / 用某个格式化器」这类代码规范，会覆盖项目原有的风格。"
+      "explain_zh": "「加注释 / 统一命名 / 用某个格式化器」这类代码规范，会覆盖项目原有的风格。",
+      "title_en": "Code style changed (comments / naming / indentation)",
+      "explain_en": "Conventions such as \"add comments\", \"use this naming\" or \"run this formatter\" override the project’s own style."
     },
     {
       "id": "refusal",
@@ -452,7 +472,9 @@
           "拒绝(执行|操作)|高风险|危险(操作|命令)"
         ]
       },
-      "explain_zh": "「高危操作先警告 / 必须显式授权 / 否则拒绝」的措辞，会让 agent 变得畏手畏脚甚至直接拒绝。"
+      "explain_zh": "「高危操作先警告 / 必须显式授权 / 否则拒绝」的措辞，会让 agent 变得畏手畏脚甚至直接拒绝。",
+      "title_en": "Refuses or became over-cautious",
+      "explain_en": "Wording such as \"warn before risky operations\" or \"require explicit permission, otherwise refuse\" makes the agent timid or refuse outright."
     },
     {
       "id": "skill-not-triggered",
@@ -475,7 +497,15 @@
         "it stopped using this tool",
         "why doesn't it pick that skill anymore",
         "my skill seems dead",
-        "it ignores the skill now"
+        "it ignores the skill now",
+        "不怎么用技能",
+        "很少用技能",
+        "不用技能了",
+        "技能都不用了",
+        "不调用 skill",
+        "barely uses skills",
+        "stopped using skills",
+        "skills are never used"
       ],
       "skill_signals": {
         "phrases": [
@@ -494,7 +524,9 @@
           "(不再使用|改用|已废弃|不再维护|仅在).{0,6}"
         ]
       },
-      "explain_zh": "description 或正文里加了「仅在…时使用 / 已废弃 / 改用别的」这类限定，会把原本会触发的场景挡掉。"
+      "explain_zh": "description 或正文里加了「仅在…时使用 / 已废弃 / 改用别的」这类限定，会把原本会触发的场景挡掉。",
+      "title_en": "A skill no longer triggers",
+      "explain_en": "Qualifiers such as \"use only when…\", \"deprecated\" or \"use X instead\" in the description block scenarios that used to trigger it."
     },
     {
       "id": "planning",
@@ -532,7 +564,9 @@
           "(先(写|出|制定|给出)计划|制定(方案|计划)|任务清单|分步执行)"
         ]
       },
-      "explain_zh": "「先出计划再动手 / 用 plan mode / 列 TODO」的规则一变，执行节奏就会跟着变。"
+      "explain_zh": "「先出计划再动手 / 用 plan mode / 列 TODO」的规则一变，执行节奏就会跟着变。",
+      "title_en": "Planning behavior changed (always plans first / never plans)",
+      "explain_en": "Changing rules such as \"plan before acting\", \"use plan mode\" or \"keep a TODO list\" changes how work is paced."
     },
     {
       "id": "speed-cost",
@@ -569,7 +603,9 @@
           "(减少|节省|压缩|控制).{0,4}(token|上下文|调用|耗时)"
         ]
       },
-      "explain_zh": "「减少 token / 少读文件 / 批量调用」这类成本优化，或反过来要求全文通读，都会改变耗时与上下文占用。"
+      "explain_zh": "「减少 token / 少读文件 / 批量调用」这类成本优化，或反过来要求全文通读，都会改变耗时与上下文占用。",
+      "title_en": "Slower, longer context, more tokens",
+      "explain_en": "Cost rules such as \"save tokens\" or \"read fewer files\", or the opposite (\"read everything\"), change time and context use."
     },
     {
       "id": "absolute-rules",
@@ -606,7 +642,9 @@
           "(必须|一律|始终|永远不要|绝不要)"
         ]
       },
-      "explain_zh": "把建议改成 always / never / 必须，会让 agent 在任何上下文里都执行同一条规则，看起来死板或不听劝。"
+      "explain_zh": "把建议改成 always / never / 必须，会让 agent 在任何上下文里都执行同一条规则，看起来死板或不听劝。",
+      "title_en": "Rules became absolute (always / never / must)",
+      "explain_en": "Turning advice into always/never/must makes the agent apply one rule in every context, so it seems rigid."
     }
   ],
   "platform_tokens": [
@@ -618,7 +656,8 @@
       ],
       "kind": "command",
       "example": "Get-ChildItem",
-      "explain_zh": "PowerShell cmdlet，macOS/Linux 默认没有 pwsh，照抄会 command not found。"
+      "explain_zh": "PowerShell cmdlet，macOS/Linux 默认没有 pwsh，照抄会 command not found。",
+      "explain_en": "PowerShell cmdlet; macOS/Linux have no pwsh by default, so it fails with command not found."
     },
     {
       "id": "pwsh-exe",
@@ -628,7 +667,8 @@
       ],
       "kind": "command",
       "example": "powershell.exe -NoProfile",
-      "explain_zh": "Windows 自带的 PowerShell 可执行文件，其它平台没有。"
+      "explain_zh": "Windows 自带的 PowerShell 可执行文件，其它平台没有。",
+      "explain_en": "Windows' built-in PowerShell executable; other platforms don't have it."
     },
     {
       "id": "pwsh-core",
@@ -638,7 +678,8 @@
       ],
       "kind": "command",
       "example": "pwsh -File build.ps1",
-      "explain_zh": "PowerShell 7 的 pwsh，Windows 以外的机器通常要额外安装。"
+      "explain_zh": "PowerShell 7 的 pwsh，Windows 以外的机器通常要额外安装。",
+      "explain_en": "PowerShell 7 (pwsh) usually has to be installed separately outside Windows."
     },
     {
       "id": "ps1-ext",
@@ -648,7 +689,8 @@
       ],
       "kind": "file",
       "example": "setup.ps1",
-      "explain_zh": ".ps1 脚本要靠 PowerShell 执行，Windows 以外没有默认解释器。"
+      "explain_zh": ".ps1 脚本要靠 PowerShell 执行，Windows 以外没有默认解释器。",
+      "explain_en": ".ps1 scripts need PowerShell; there is no default interpreter outside Windows."
     },
     {
       "id": "psm1-ext",
@@ -658,7 +700,8 @@
       ],
       "kind": "file",
       "example": "module.psm1",
-      "explain_zh": "PowerShell 模块文件，只能在 PowerShell 里导入。"
+      "explain_zh": "PowerShell 模块文件，只能在 PowerShell 里导入。",
+      "explain_en": "PowerShell module file; only PowerShell can import it."
     },
     {
       "id": "psd1-ext",
@@ -668,7 +711,8 @@
       ],
       "kind": "file",
       "example": "module.psd1",
-      "explain_zh": "PowerShell 模块清单，只有 PowerShell 会读。"
+      "explain_zh": "PowerShell 模块清单，只有 PowerShell 会读。",
+      "explain_en": "PowerShell module manifest; only PowerShell reads it."
     },
     {
       "id": "ps-execution-policy",
@@ -678,7 +722,8 @@
       ],
       "kind": "command",
       "example": "Set-ExecutionPolicy RemoteSigned",
-      "explain_zh": "PowerShell 执行策略，非 Windows 平台没有这个概念。"
+      "explain_zh": "PowerShell 执行策略，非 Windows 平台没有这个概念。",
+      "explain_en": "PowerShell execution policy; the concept does not exist off Windows."
     },
     {
       "id": "ps-env-var",
@@ -688,7 +733,8 @@
       ],
       "kind": "syntax",
       "example": "$env:APPDATA",
-      "explain_zh": "PowerShell 的环境变量语法，bash 里要用 $VAR 或 ${VAR}。"
+      "explain_zh": "PowerShell 的环境变量语法，bash 里要用 $VAR 或 ${VAR}。",
+      "explain_en": "PowerShell environment variable syntax; bash uses $VAR or ${VAR}."
     },
     {
       "id": "ps-hashtable",
@@ -698,7 +744,8 @@
       ],
       "kind": "syntax",
       "example": "@{ Name = 'demo' }",
-      "explain_zh": "PowerShell 哈希表字面量，别的 shell 不认识。"
+      "explain_zh": "PowerShell 哈希表字面量，别的 shell 不认识。",
+      "explain_en": "PowerShell hashtable literal; other shells do not understand it."
     },
     {
       "id": "ps-null",
@@ -708,7 +755,8 @@
       ],
       "kind": "syntax",
       "example": "Remove-Item $null",
-      "explain_zh": "$null 是 PowerShell 的空值变量，其它 shell 里不存在。"
+      "explain_zh": "$null 是 PowerShell 的空值变量，其它 shell 里不存在。",
+      "explain_en": "$null is the PowerShell null variable; it does not exist in other shells."
     },
     {
       "id": "ps-pipeline-cmdlet",
@@ -718,7 +766,8 @@
       ],
       "kind": "syntax",
       "example": "| Where-Object { $_.Name }",
-      "explain_zh": "PowerShell 的对象管道写法，管道里传的是对象而不是文本。"
+      "explain_zh": "PowerShell 的对象管道写法，管道里传的是对象而不是文本。",
+      "explain_en": "PowerShell object pipeline; the pipe carries objects, not text."
     },
     {
       "id": "ps-no-profile",
@@ -728,7 +777,8 @@
       ],
       "kind": "syntax",
       "example": "-NoProfile",
-      "explain_zh": "PowerShell 专有启动参数，其它解释器没有。"
+      "explain_zh": "PowerShell 专有启动参数，其它解释器没有。",
+      "explain_en": "PowerShell-only startup flag; other interpreters lack it."
     },
     {
       "id": "cmd-env-percent",
@@ -738,7 +788,8 @@
       ],
       "kind": "syntax",
       "example": "%APPDATA%",
-      "explain_zh": "cmd.exe 的变量展开语法，bash/zsh 里要用 $VAR。"
+      "explain_zh": "cmd.exe 的变量展开语法，bash/zsh 里要用 $VAR。",
+      "explain_en": "cmd.exe variable expansion; bash/zsh use $VAR."
     },
     {
       "id": "cmd-dir-slash",
@@ -748,7 +799,8 @@
       ],
       "kind": "command",
       "example": "dir /s",
-      "explain_zh": "cmd.exe 的 dir 开关，Unix 的 ls 不认。"
+      "explain_zh": "cmd.exe 的 dir 开关，Unix 的 ls 不认。",
+      "explain_en": "cmd.exe dir switches; Unix ls doesn't accept them."
     },
     {
       "id": "cmd-copy-slash",
@@ -758,7 +810,8 @@
       ],
       "kind": "command",
       "example": "copy /y src dst",
-      "explain_zh": "cmd.exe 的 copy 开关，Unix 要用 cp。"
+      "explain_zh": "cmd.exe 的 copy 开关，Unix 要用 cp。",
+      "explain_en": "cmd.exe copy switches; Unix uses cp."
     },
     {
       "id": "cmd-del-slash",
@@ -768,7 +821,8 @@
       ],
       "kind": "command",
       "example": "del /q temp.txt",
-      "explain_zh": "cmd.exe 的 del 开关，Unix 要用 rm。"
+      "explain_zh": "cmd.exe 的 del 开关，Unix 要用 rm。",
+      "explain_en": "cmd.exe del switches; Unix uses rm."
     },
     {
       "id": "cmd-xcopy",
@@ -778,7 +832,8 @@
       ],
       "kind": "command",
       "example": "xcopy /E src dst",
-      "explain_zh": "Windows 专用拷贝命令。"
+      "explain_zh": "Windows 专用拷贝命令。",
+      "explain_en": "Windows-only copy command."
     },
     {
       "id": "cmd-robocopy",
@@ -788,7 +843,8 @@
       ],
       "kind": "command",
       "example": "robocopy src dst",
-      "explain_zh": "Windows 专用镜像拷贝工具。"
+      "explain_zh": "Windows 专用镜像拷贝工具。",
+      "explain_en": "Windows-only mirror copy tool."
     },
     {
       "id": "cmd-call-bat",
@@ -798,7 +854,8 @@
       ],
       "kind": "syntax",
       "example": "call build.bat",
-      "explain_zh": "cmd.exe 里调用批处理要用 call，Unix shell 没有这个写法。"
+      "explain_zh": "cmd.exe 里调用批处理要用 call，Unix shell 没有这个写法。",
+      "explain_en": "cmd.exe needs call to run a batch file; Unix shells have no such form."
     },
     {
       "id": "bat-ext",
@@ -808,7 +865,8 @@
       ],
       "kind": "file",
       "example": "build.bat",
-      "explain_zh": "批处理文件只有 Windows 能直接执行。"
+      "explain_zh": "批处理文件只有 Windows 能直接执行。",
+      "explain_en": "Batch files run directly only on Windows."
     },
     {
       "id": "cmd-slash-c",
@@ -818,7 +876,8 @@
       ],
       "kind": "command",
       "example": "cmd /c dir",
-      "explain_zh": "用 cmd.exe 跑一条命令，非 Windows 没有 cmd。"
+      "explain_zh": "用 cmd.exe 跑一条命令，非 Windows 没有 cmd。",
+      "explain_en": "Runs a command through cmd.exe, which does not exist off Windows."
     },
     {
       "id": "win-drive-path",
@@ -828,7 +887,8 @@
       ],
       "kind": "path",
       "example": "C:\\Users\\demo",
-      "explain_zh": "盘符路径，Unix 上不存在。"
+      "explain_zh": "盘符路径，Unix 上不存在。",
+      "explain_en": "Drive-letter path; it does not exist on Unix."
     },
     {
       "id": "win-unc-path",
@@ -838,7 +898,8 @@
       ],
       "kind": "path",
       "example": "\\\\server\\share",
-      "explain_zh": "UNC 网络路径，Unix 用 /mnt 或挂载点。"
+      "explain_zh": "UNC 网络路径，Unix 用 /mnt 或挂载点。",
+      "explain_en": "UNC network path; Unix uses /mnt or mount points."
     },
     {
       "id": "win-users-dir",
@@ -848,7 +909,8 @@
       ],
       "kind": "path",
       "example": "C:\\Users\\demo\\project",
-      "explain_zh": "Windows 用户目录路径，Unix 是 /home 或 /Users。"
+      "explain_zh": "Windows 用户目录路径，Unix 是 /home 或 /Users。",
+      "explain_en": "Windows user directory; Unix uses /home or /Users."
     },
     {
       "id": "win-program-files",
@@ -858,7 +920,8 @@
       ],
       "kind": "path",
       "example": "C:\\Program Files\\App",
-      "explain_zh": "Windows 安装目录，别的平台没有。"
+      "explain_zh": "Windows 安装目录，别的平台没有。",
+      "explain_en": "Windows install directory; other platforms lack it."
     },
     {
       "id": "win-localappdata",
@@ -868,7 +931,8 @@
       ],
       "kind": "path",
       "example": "%LOCALAPPDATA%\\Temp",
-      "explain_zh": "Windows 本地应用数据目录变量。"
+      "explain_zh": "Windows 本地应用数据目录变量。",
+      "explain_en": "Windows local app data variable."
     },
     {
       "id": "win-userprofile",
@@ -878,7 +942,8 @@
       ],
       "kind": "path",
       "example": "%USERPROFILE%\\.config",
-      "explain_zh": "Windows 用户主目录变量，Unix 用 $HOME。"
+      "explain_zh": "Windows 用户主目录变量，Unix 用 $HOME。",
+      "explain_en": "Windows home directory variable; Unix uses $HOME."
     },
     {
       "id": "win-registry-hive",
@@ -888,7 +953,8 @@
       ],
       "kind": "path",
       "example": "HKLM\\SOFTWARE",
-      "explain_zh": "Windows 注册表根键，其它平台没有注册表。"
+      "explain_zh": "Windows 注册表根键，其它平台没有注册表。",
+      "explain_en": "Windows registry root key; other platforms have no registry."
     },
     {
       "id": "win-reg-cmd",
@@ -898,7 +964,8 @@
       ],
       "kind": "command",
       "example": "reg query HKLM",
-      "explain_zh": "Windows 注册表命令行工具。"
+      "explain_zh": "Windows 注册表命令行工具。",
+      "explain_en": "Windows registry command-line tool."
     },
     {
       "id": "win-taskkill",
@@ -908,7 +975,8 @@
       ],
       "kind": "command",
       "example": "taskkill /F /PID 1234",
-      "explain_zh": "Windows 结束进程命令，Unix 用 kill。"
+      "explain_zh": "Windows 结束进程命令，Unix 用 kill。",
+      "explain_en": "Windows process kill command; Unix uses kill."
     },
     {
       "id": "win-tasklist",
@@ -918,7 +986,8 @@
       ],
       "kind": "command",
       "example": "tasklist",
-      "explain_zh": "Windows 列进程命令，Unix 用 ps。"
+      "explain_zh": "Windows 列进程命令，Unix 用 ps。",
+      "explain_en": "Windows process list command; Unix uses ps."
     },
     {
       "id": "win-icacls",
@@ -928,7 +997,8 @@
       ],
       "kind": "command",
       "example": "icacls . /grant",
-      "explain_zh": "Windows 权限设置命令，Unix 用 chmod/chown。"
+      "explain_zh": "Windows 权限设置命令，Unix 用 chmod/chown。",
+      "explain_en": "Windows permissions command; Unix uses chmod/chown."
     },
     {
       "id": "win-where-exe",
@@ -938,7 +1008,8 @@
       ],
       "kind": "command",
       "example": "where.exe python",
-      "explain_zh": "Windows 查找可执行文件，Unix 用 which/command -v。"
+      "explain_zh": "Windows 查找可执行文件，Unix 用 which/command -v。",
+      "explain_en": "Windows executable lookup; Unix uses which or command -v."
     },
     {
       "id": "win-wsl",
@@ -948,7 +1019,8 @@
       ],
       "kind": "command",
       "example": "wsl.exe -d Ubuntu",
-      "explain_zh": "WSL 只在 Windows 上存在。"
+      "explain_zh": "WSL 只在 Windows 上存在。",
+      "explain_en": "WSL exists only on Windows."
     },
     {
       "id": "win-wsl-mnt",
@@ -958,7 +1030,8 @@
       ],
       "kind": "path",
       "example": "/mnt/c/Users/demo",
-      "explain_zh": "WSL 里访问 Windows 盘的路径，纯 Linux 上没有。"
+      "explain_zh": "WSL 里访问 Windows 盘的路径，纯 Linux 上没有。",
+      "explain_en": "Path to Windows drives inside WSL; plain Linux has none."
     },
     {
       "id": "win-choco",
@@ -968,7 +1041,8 @@
       ],
       "kind": "command",
       "example": "choco install nodejs",
-      "explain_zh": "Chocolatey 包管理器，只装在 Windows。"
+      "explain_zh": "Chocolatey 包管理器，只装在 Windows。",
+      "explain_en": "Chocolatey package manager, Windows only."
     },
     {
       "id": "win-winget",
@@ -978,7 +1052,8 @@
       ],
       "kind": "command",
       "example": "winget install Git.Git",
-      "explain_zh": "Windows 包管理器 winget。"
+      "explain_zh": "Windows 包管理器 winget。",
+      "explain_en": "winget, the Windows package manager."
     },
     {
       "id": "win-net-cmd",
@@ -988,7 +1063,8 @@
       ],
       "kind": "command",
       "example": "net start spooler",
-      "explain_zh": "Windows net 命令，Unix 用 service/systemctl。"
+      "explain_zh": "Windows net 命令，Unix 用 service/systemctl。",
+      "explain_en": "Windows net command; Unix uses service/systemctl."
     },
     {
       "id": "win-py-launcher",
@@ -998,7 +1074,8 @@
       ],
       "kind": "command",
       "example": "py -3 script.py",
-      "explain_zh": "Windows 的 Python 启动器 py，Unix 上一般直接用 python3。"
+      "explain_zh": "Windows 的 Python 启动器 py，Unix 上一般直接用 python3。",
+      "explain_en": "The Windows py launcher; Unix normally calls python3 directly."
     },
     {
       "id": "win-certutil",
@@ -1008,7 +1085,8 @@
       ],
       "kind": "command",
       "example": "certutil -hashfile a.txt SHA256",
-      "explain_zh": "Windows 证书/哈希工具，Unix 用 openssl。"
+      "explain_zh": "Windows 证书/哈希工具，Unix 用 openssl。",
+      "explain_en": "Windows certificate/hash tool; Unix uses openssl."
     },
     {
       "id": "win-gpupdate",
@@ -1018,7 +1096,8 @@
       ],
       "kind": "command",
       "example": "gpupdate /force",
-      "explain_zh": "Windows 组策略更新命令。"
+      "explain_zh": "Windows 组策略更新命令。",
+      "explain_en": "Windows group policy update command."
     },
     {
       "id": "win-sc-exe",
@@ -1028,7 +1107,8 @@
       ],
       "kind": "command",
       "example": "sc.exe query",
-      "explain_zh": "Windows 服务控制命令，Unix 用 systemctl。"
+      "explain_zh": "Windows 服务控制命令，Unix 用 systemctl。",
+      "explain_en": "Windows service control command; Unix uses systemctl."
     },
     {
       "id": "mac-brew",
@@ -1038,7 +1118,8 @@
       ],
       "kind": "command",
       "example": "brew install jq",
-      "explain_zh": "Homebrew 是 macOS 的包管理器，Linux 上默认没有。"
+      "explain_zh": "Homebrew 是 macOS 的包管理器，Linux 上默认没有。",
+      "explain_en": "Homebrew is the macOS package manager; Linux lacks it by default."
     },
     {
       "id": "mac-brew-path",
@@ -1048,7 +1129,8 @@
       ],
       "kind": "path",
       "example": "/opt/homebrew/bin",
-      "explain_zh": "Apple Silicon 上 Homebrew 的安装路径。"
+      "explain_zh": "Apple Silicon 上 Homebrew 的安装路径。",
+      "explain_en": "Homebrew install path on Apple Silicon."
     },
     {
       "id": "mac-open-a",
@@ -1058,7 +1140,8 @@
       ],
       "kind": "command",
       "example": "open -a Safari",
-      "explain_zh": "macOS 用 open 打开应用，Linux 用 xdg-open。"
+      "explain_zh": "macOS 用 open 打开应用，Linux 用 xdg-open。",
+      "explain_en": "macOS opens apps with open; Linux uses xdg-open."
     },
     {
       "id": "mac-pbcopy",
@@ -1068,7 +1151,8 @@
       ],
       "kind": "command",
       "example": "pbcopy",
-      "explain_zh": "macOS 剪贴板命令，Linux 用 xclip/wl-copy。"
+      "explain_zh": "macOS 剪贴板命令，Linux 用 xclip/wl-copy。",
+      "explain_en": "macOS clipboard command; Linux uses xclip/wl-copy."
     },
     {
       "id": "mac-osascript",
@@ -1078,7 +1162,8 @@
       ],
       "kind": "command",
       "example": "osascript -e \"beep\"",
-      "explain_zh": "AppleScript 解释器，只有 macOS 有。"
+      "explain_zh": "AppleScript 解释器，只有 macOS 有。",
+      "explain_en": "AppleScript interpreter, macOS only."
     },
     {
       "id": "mac-launchctl",
@@ -1088,7 +1173,8 @@
       ],
       "kind": "command",
       "example": "launchctl load ~/Library/LaunchAgents/x.plist",
-      "explain_zh": "macOS 服务管理，Linux 用 systemctl。"
+      "explain_zh": "macOS 服务管理，Linux 用 systemctl。",
+      "explain_en": "macOS service management; Linux uses systemctl."
     },
     {
       "id": "mac-library",
@@ -1098,7 +1184,8 @@
       ],
       "kind": "path",
       "example": "~/Library/Application Support",
-      "explain_zh": "macOS 用户库目录，Linux 上不存在。"
+      "explain_zh": "macOS 用户库目录，Linux 上不存在。",
+      "explain_en": "macOS user Library directory; it does not exist on Linux."
     },
     {
       "id": "mac-applications",
@@ -1108,7 +1195,8 @@
       ],
       "kind": "path",
       "example": "/Applications/Xcode.app",
-      "explain_zh": "macOS 应用安装目录。"
+      "explain_zh": "macOS 应用安装目录。",
+      "explain_en": "macOS application install directory."
     },
     {
       "id": "mac-defaults",
@@ -1118,7 +1206,8 @@
       ],
       "kind": "command",
       "example": "defaults write com.apple.dock",
-      "explain_zh": "macOS 读写应用偏好的命令。"
+      "explain_zh": "macOS 读写应用偏好的命令。",
+      "explain_en": "macOS command for reading and writing app preferences."
     },
     {
       "id": "mac-xcode-select",
@@ -1128,7 +1217,8 @@
       ],
       "kind": "command",
       "example": "xcode-select --install",
-      "explain_zh": "macOS 命令行工具安装命令。"
+      "explain_zh": "macOS 命令行工具安装命令。",
+      "explain_en": "macOS command line tools installer."
     },
     {
       "id": "mac-sed-inplace",
@@ -1138,7 +1228,8 @@
       ],
       "kind": "command",
       "example": "sed -i '' -e 's/a/b/'",
-      "explain_zh": "BSD sed 的 -i 必须带空串参数，Linux 的 GNU sed 会报错。"
+      "explain_zh": "BSD sed 的 -i 必须带空串参数，Linux 的 GNU sed 会报错。",
+      "explain_en": "BSD sed -i needs an empty-string argument; GNU sed on Linux errors on it."
     },
     {
       "id": "mac-codesign",
@@ -1148,7 +1239,8 @@
       ],
       "kind": "command",
       "example": "codesign --verify app",
-      "explain_zh": "macOS 代码签名工具。"
+      "explain_zh": "macOS 代码签名工具。",
+      "explain_en": "macOS code signing tool."
     },
     {
       "id": "mac-hdiutil",
@@ -1158,7 +1250,8 @@
       ],
       "kind": "command",
       "example": "hdiutil attach img.dmg",
-      "explain_zh": "macOS 挂载 dmg 的命令。"
+      "explain_zh": "macOS 挂载 dmg 的命令。",
+      "explain_en": "macOS command for mounting dmg images."
     },
     {
       "id": "mac-diskutil",
@@ -1168,7 +1261,8 @@
       ],
       "kind": "command",
       "example": "diskutil list",
-      "explain_zh": "macOS 磁盘工具，Linux 用 lsblk/fdisk。"
+      "explain_zh": "macOS 磁盘工具，Linux 用 lsblk/fdisk。",
+      "explain_en": "macOS disk utility; Linux uses lsblk/fdisk."
     },
     {
       "id": "mac-plistbuddy",
@@ -1178,7 +1272,8 @@
       ],
       "kind": "command",
       "example": "/usr/libexec/PlistBuddy -c Print",
-      "explain_zh": "macOS 读写 plist 的工具。"
+      "explain_zh": "macOS 读写 plist 的工具。",
+      "explain_en": "macOS tool for reading and writing plists."
     },
     {
       "id": "mac-security-identity",
@@ -1188,7 +1283,8 @@
       ],
       "kind": "command",
       "example": "security find-identity -v",
-      "explain_zh": "macOS 查看证书身份的命令。"
+      "explain_zh": "macOS 查看证书身份的命令。",
+      "explain_en": "macOS command for listing signing identities."
     },
     {
       "id": "mac-spctl",
@@ -1198,7 +1294,8 @@
       ],
       "kind": "command",
       "example": "spctl --assess app",
-      "explain_zh": "macOS 校验 app 签名/公证状态。"
+      "explain_zh": "macOS 校验 app 签名/公证状态。",
+      "explain_en": "macOS check of app signing/notarization."
     },
     {
       "id": "mac-xattr",
@@ -1208,7 +1305,8 @@
       ],
       "kind": "command",
       "example": "xattr -d com.apple.quarantine app",
-      "explain_zh": "macOS 扩展属性命令，Linux 上是 getfattr/setfattr。"
+      "explain_zh": "macOS 扩展属性命令，Linux 上是 getfattr/setfattr。",
+      "explain_en": "macOS extended attributes command; Linux uses getfattr/setfattr."
     },
     {
       "id": "mac-sips",
@@ -1218,7 +1316,8 @@
       ],
       "kind": "command",
       "example": "sips -Z 1024 img.png",
-      "explain_zh": "macOS 自带图片处理命令。"
+      "explain_zh": "macOS 自带图片处理命令。",
+      "explain_en": "macOS built-in image processing command."
     },
     {
       "id": "linux-apt",
@@ -1228,7 +1327,8 @@
       ],
       "kind": "command",
       "example": "apt-get install curl",
-      "explain_zh": "Debian/Ubuntu 包管理器，macOS/Windows 没有。"
+      "explain_zh": "Debian/Ubuntu 包管理器，macOS/Windows 没有。",
+      "explain_en": "Debian/Ubuntu package manager; macOS and Windows lack it."
     },
     {
       "id": "linux-systemctl",
@@ -1238,7 +1338,8 @@
       ],
       "kind": "command",
       "example": "systemctl restart nginx",
-      "explain_zh": "systemd 服务管理，只有 Linux 有。"
+      "explain_zh": "systemd 服务管理，只有 Linux 有。",
+      "explain_en": "systemd service management, Linux only."
     },
     {
       "id": "linux-journalctl",
@@ -1248,7 +1349,8 @@
       ],
       "kind": "command",
       "example": "journalctl -u nginx",
-      "explain_zh": "systemd 日志工具，只有 Linux 有。"
+      "explain_zh": "systemd 日志工具，只有 Linux 有。",
+      "explain_en": "systemd log tool, Linux only."
     },
     {
       "id": "linux-proc",
@@ -1258,7 +1360,8 @@
       ],
       "kind": "path",
       "example": "/proc/cpuinfo",
-      "explain_zh": "/proc 是 Linux 的虚拟文件系统，macOS/Windows 没有。"
+      "explain_zh": "/proc 是 Linux 的虚拟文件系统，macOS/Windows 没有。",
+      "explain_en": "/proc is a Linux virtual filesystem; macOS and Windows lack it."
     },
     {
       "id": "linux-os-release",
@@ -1268,7 +1371,8 @@
       ],
       "kind": "path",
       "example": "/etc/os-release",
-      "explain_zh": "Linux 发行版信息文件。"
+      "explain_zh": "Linux 发行版信息文件。",
+      "explain_en": "Linux distribution info file."
     },
     {
       "id": "linux-yum-dnf",
@@ -1278,7 +1382,8 @@
       ],
       "kind": "command",
       "example": "dnf install curl",
-      "explain_zh": "RHEL/Fedora 包管理器。"
+      "explain_zh": "RHEL/Fedora 包管理器。",
+      "explain_en": "RHEL/Fedora package manager."
     },
     {
       "id": "linux-pacman",
@@ -1288,7 +1393,8 @@
       ],
       "kind": "command",
       "example": "pacman -S curl",
-      "explain_zh": "Arch Linux 包管理器。"
+      "explain_zh": "Arch Linux 包管理器。",
+      "explain_en": "Arch Linux package manager."
     },
     {
       "id": "linux-udevadm",
@@ -1298,7 +1404,8 @@
       ],
       "kind": "command",
       "example": "udevadm trigger",
-      "explain_zh": "Linux 设备管理工具。"
+      "explain_zh": "Linux 设备管理工具。",
+      "explain_en": "Linux device management tool."
     },
     {
       "id": "linux-netplan",
@@ -1308,7 +1415,8 @@
       ],
       "kind": "command",
       "example": "netplan apply",
-      "explain_zh": "Ubuntu 网络配置工具。"
+      "explain_zh": "Ubuntu 网络配置工具。",
+      "explain_en": "Ubuntu network configuration tool."
     },
     {
       "id": "linux-selinux",
@@ -1318,7 +1426,8 @@
       ],
       "kind": "command",
       "example": "sestatus",
-      "explain_zh": "SELinux 管理命令，只有 Linux 有。"
+      "explain_zh": "SELinux 管理命令，只有 Linux 有。",
+      "explain_en": "SELinux management command, Linux only."
     },
     {
       "id": "linux-iptables",
@@ -1328,7 +1437,8 @@
       ],
       "kind": "command",
       "example": "iptables -L",
-      "explain_zh": "Linux 防火墙命令。"
+      "explain_zh": "Linux 防火墙命令。",
+      "explain_en": "Linux firewall command."
     },
     {
       "id": "linux-useradd",
@@ -1338,7 +1448,8 @@
       ],
       "kind": "command",
       "example": "useradd -m deploy",
-      "explain_zh": "Linux 用户管理命令，macOS 用 dscl。"
+      "explain_zh": "Linux 用户管理命令，macOS 用 dscl。",
+      "explain_en": "Linux user management command; macOS uses dscl."
     },
     {
       "id": "linux-systemd-unit",
@@ -1348,7 +1459,8 @@
       ],
       "kind": "file",
       "example": "app.service",
-      "explain_zh": "systemd 单元文件，只有 Linux 的 systemd 会读。"
+      "explain_zh": "systemd 单元文件，只有 Linux 的 systemd 会读。",
+      "explain_en": "systemd unit file; only systemd on Linux reads it."
     },
     {
       "id": "linux-systemd-dir",
@@ -1358,7 +1470,8 @@
       ],
       "kind": "path",
       "example": "/etc/systemd/system",
-      "explain_zh": "systemd 单元目录。"
+      "explain_zh": "systemd 单元目录。",
+      "explain_en": "systemd unit directory."
     },
     {
       "id": "linux-fstab",
@@ -1368,7 +1481,8 @@
       ],
       "kind": "path",
       "example": "/etc/fstab",
-      "explain_zh": "Linux 挂载配置，macOS 用 /etc/auto_master。"
+      "explain_zh": "Linux 挂载配置，macOS 用 /etc/auto_master。",
+      "explain_en": "Linux mount configuration; macOS uses /etc/auto_master."
     },
     {
       "id": "linux-lsb-release",
@@ -1378,7 +1492,8 @@
       ],
       "kind": "command",
       "example": "lsb_release -a",
-      "explain_zh": "Linux 发行版查询命令。"
+      "explain_zh": "Linux 发行版查询命令。",
+      "explain_en": "Linux distribution query command."
     },
     {
       "id": "linux-apt-dir",
@@ -1388,7 +1503,8 @@
       ],
       "kind": "path",
       "example": "/etc/apt/sources.list",
-      "explain_zh": "APT 配置目录，只有 Debian/Ubuntu 系 Linux 有。"
+      "explain_zh": "APT 配置目录，只有 Debian/Ubuntu 系 Linux 有。",
+      "explain_en": "APT configuration directory, Debian/Ubuntu only."
     },
     {
       "id": "posix-shebang",
@@ -1398,7 +1514,8 @@
       ],
       "kind": "syntax",
       "example": "#!/usr/bin/env bash",
-      "explain_zh": "shebang 依赖 Unix 路径；Windows 不按 shebang 选择解释器。"
+      "explain_zh": "shebang 依赖 Unix 路径；Windows 不按 shebang 选择解释器。",
+      "explain_en": "A shebang relies on Unix paths; Windows doesn't pick interpreters by shebang."
     },
     {
       "id": "posix-shebang-python",
@@ -1408,7 +1525,8 @@
       ],
       "kind": "syntax",
       "example": "#!/usr/bin/env python3",
-      "explain_zh": "Python 脚本的 shebang 只在 Unix 上生效，Windows 要靠 py 启动器。"
+      "explain_zh": "Python 脚本的 shebang 只在 Unix 上生效，Windows 要靠 py 启动器。",
+      "explain_en": "A Python shebang only works on Unix; Windows relies on the py launcher."
     },
     {
       "id": "posix-heredoc",
@@ -1418,7 +1536,8 @@
       ],
       "kind": "syntax",
       "example": "<<EOF",
-      "explain_zh": "heredoc 是 Unix shell 语法，PowerShell 用 here-string @\"…\"@。"
+      "explain_zh": "heredoc 是 Unix shell 语法，PowerShell 用 here-string @\"…\"@。",
+      "explain_en": "Heredoc is Unix shell syntax; PowerShell uses here-strings @\"…\"@."
     },
     {
       "id": "posix-chmod",
@@ -1428,7 +1547,8 @@
       ],
       "kind": "command",
       "example": "chmod +x run.sh",
-      "explain_zh": "chmod 是 Unix 权限命令，Windows 没有等价的权限位。"
+      "explain_zh": "chmod 是 Unix 权限命令，Windows 没有等价的权限位。",
+      "explain_en": "chmod is a Unix permissions command; Windows has no equivalent permission bits."
     },
     {
       "id": "posix-exec-bit",
@@ -1438,7 +1558,8 @@
       ],
       "kind": "permission",
       "example": "chmod 755 deploy.sh",
-      "explain_zh": "依赖可执行位；在 Windows/无 exec 位的文件系统上直接跑会失败。"
+      "explain_zh": "依赖可执行位；在 Windows/无 exec 位的文件系统上直接跑会失败。",
+      "explain_en": "Relies on the executable bit; running it directly fails on Windows or filesystems without one."
     },
     {
       "id": "posix-chown",
@@ -1448,7 +1569,8 @@
       ],
       "kind": "command",
       "example": "chown app:app data",
-      "explain_zh": "chown 是 Unix 所有权命令，Windows 不支持。"
+      "explain_zh": "chown 是 Unix 所有权命令，Windows 不支持。",
+      "explain_en": "chown is a Unix ownership command; Windows does not support it."
     },
     {
       "id": "posix-ln-s",
@@ -1458,7 +1580,8 @@
       ],
       "kind": "command",
       "example": "ln -s target link",
-      "explain_zh": "软链接；Windows 上要管理员权限或用 mklink。"
+      "explain_zh": "软链接；Windows 上要管理员权限或用 mklink。",
+      "explain_en": "Symbolic link; Windows needs admin rights or mklink."
     },
     {
       "id": "posix-xargs",
@@ -1468,7 +1591,8 @@
       ],
       "kind": "command",
       "example": "xargs -0 rm",
-      "explain_zh": "xargs 是 Unix 工具，Windows 默认没有。"
+      "explain_zh": "xargs 是 Unix 工具，Windows 默认没有。",
+      "explain_en": "xargs is a Unix tool; Windows lacks it by default."
     },
     {
       "id": "gnu-sed-inplace",
@@ -1478,7 +1602,8 @@
       ],
       "kind": "command",
       "example": "sed -i 's/a/b/' f.txt",
-      "explain_zh": "GNU sed 的 -i 在 macOS 的 BSD sed 上会报错（要 sed -i ''）。"
+      "explain_zh": "GNU sed 的 -i 在 macOS 的 BSD sed 上会报错（要 sed -i ''）。",
+      "explain_en": "GNU sed -i errors on macOS's BSD sed (which needs sed -i '')."
     },
     {
       "id": "posix-awk",
@@ -1488,7 +1613,8 @@
       ],
       "kind": "command",
       "example": "awk '{print $1}'",
-      "explain_zh": "awk 是 Unix 文本工具，Windows 默认没有。"
+      "explain_zh": "awk 是 Unix 文本工具，Windows 默认没有。",
+      "explain_en": "awk is a Unix text tool; Windows lacks it by default."
     },
     {
       "id": "posix-grep-flags",
@@ -1498,7 +1624,8 @@
       ],
       "kind": "command",
       "example": "grep -rn TODO .",
-      "explain_zh": "grep 是 Unix 工具；Windows 自带的是 findstr。"
+      "explain_zh": "grep 是 Unix 工具；Windows 自带的是 findstr。",
+      "explain_en": "grep is a Unix tool; Windows ships findstr instead."
     },
     {
       "id": "posix-find-name",
@@ -1508,7 +1635,8 @@
       ],
       "kind": "command",
       "example": "find . -name '*.log'",
-      "explain_zh": "Unix find 的语法，PowerShell 用 Get-ChildItem -Filter。"
+      "explain_zh": "Unix find 的语法，PowerShell 用 Get-ChildItem -Filter。",
+      "explain_en": "Unix find syntax; PowerShell uses Get-ChildItem -Filter."
     },
     {
       "id": "posix-sudo",
@@ -1518,7 +1646,8 @@
       ],
       "kind": "command",
       "example": "sudo systemctl restart nginx",
-      "explain_zh": "sudo 是 Unix 提权方式，Windows 需要管理员终端。"
+      "explain_zh": "sudo 是 Unix 提权方式，Windows 需要管理员终端。",
+      "explain_en": "sudo is how Unix elevates; Windows needs an administrator terminal."
     },
     {
       "id": "posix-usr-bin",
@@ -1528,7 +1657,8 @@
       ],
       "kind": "path",
       "example": "/usr/bin/env",
-      "explain_zh": "Unix 系统路径，Windows 上不存在。"
+      "explain_zh": "Unix 系统路径，Windows 上不存在。",
+      "explain_en": "Unix system path; it does not exist on Windows."
     },
     {
       "id": "posix-usr-local-bin",
@@ -1538,7 +1668,8 @@
       ],
       "kind": "path",
       "example": "/usr/local/bin/python3",
-      "explain_zh": "Unix 本地安装路径。"
+      "explain_zh": "Unix 本地安装路径。",
+      "explain_en": "Unix local install path."
     },
     {
       "id": "posix-tmp",
@@ -1548,7 +1679,8 @@
       ],
       "kind": "path",
       "example": "/tmp/build.log",
-      "explain_zh": "Unix 临时目录；Windows 用 %TEMP%。"
+      "explain_zh": "Unix 临时目录；Windows 用 %TEMP%。",
+      "explain_en": "Unix temp directory; Windows uses %TEMP%."
     },
     {
       "id": "posix-dev-null",
@@ -1558,7 +1690,8 @@
       ],
       "kind": "path",
       "example": "command > /dev/null",
-      "explain_zh": "/dev/null 是 Unix 设备，Windows 用 NUL。"
+      "explain_zh": "/dev/null 是 Unix 设备，Windows 用 NUL。",
+      "explain_en": "/dev/null is a Unix device; Windows uses NUL."
     },
     {
       "id": "posix-home-var",
@@ -1568,7 +1701,8 @@
       ],
       "kind": "syntax",
       "example": "$HOME/.config",
-      "explain_zh": "$HOME 是 Unix 环境变量，Windows 用 %USERPROFILE%。"
+      "explain_zh": "$HOME 是 Unix 环境变量，Windows 用 %USERPROFILE%。",
+      "explain_en": "$HOME is a Unix environment variable; Windows uses %USERPROFILE%."
     },
     {
       "id": "posix-export",
@@ -1578,7 +1712,8 @@
       ],
       "kind": "syntax",
       "example": "export PATH=\"$PWD/bin:$PATH\"",
-      "explain_zh": "export 是 Unix shell 语法，cmd 用 set，PowerShell 用 $env:。"
+      "explain_zh": "export 是 Unix shell 语法，cmd 用 set，PowerShell 用 $env:。",
+      "explain_en": "export is Unix shell syntax; cmd uses set and PowerShell uses $env:."
     },
     {
       "id": "posix-source",
@@ -1588,7 +1723,8 @@
       ],
       "kind": "command",
       "example": "source ./env.sh",
-      "explain_zh": "source 是 bash/zsh 内建命令，PowerShell 用 . ./env.ps1。"
+      "explain_zh": "source 是 bash/zsh 内建命令，PowerShell 用 . ./env.ps1。",
+      "explain_en": "source is a bash/zsh builtin; PowerShell uses . ./env.ps1."
     },
     {
       "id": "posix-set-e",
@@ -1598,7 +1734,8 @@
       ],
       "kind": "syntax",
       "example": "set -euo pipefail",
-      "explain_zh": "shell 严格模式选项，其它平台无意义。"
+      "explain_zh": "shell 严格模式选项，其它平台无意义。",
+      "explain_en": "Shell strict-mode option; meaningless on other platforms."
     },
     {
       "id": "posix-tail-f",
@@ -1608,7 +1745,8 @@
       ],
       "kind": "command",
       "example": "tail -f app.log",
-      "explain_zh": "tail -f 是 Unix 用法，PowerShell 用 Get-Content -Wait。"
+      "explain_zh": "tail -f 是 Unix 用法，PowerShell 用 Get-Content -Wait。",
+      "explain_en": "tail -f is a Unix idiom; PowerShell uses Get-Content -Wait."
     },
     {
       "id": "posix-dot-slash-script",
@@ -1618,7 +1756,8 @@
       ],
       "kind": "permission",
       "example": "./deploy.sh",
-      "explain_zh": "直接执行脚本依赖可执行位和 shebang，Windows 上跑不了。"
+      "explain_zh": "直接执行脚本依赖可执行位和 shebang，Windows 上跑不了。",
+      "explain_en": "Running a script directly relies on the executable bit and shebang; it fails on Windows."
     },
     {
       "id": "posix-curl-pipe-sh",
@@ -1628,7 +1767,8 @@
       ],
       "kind": "command",
       "example": "curl -fsSL https://x.test/i.sh | bash",
-      "explain_zh": "管道执行远程脚本的写法，Windows PowerShell 不认。"
+      "explain_zh": "管道执行远程脚本的写法，Windows PowerShell 不认。",
+      "explain_en": "Piping a remote script into a shell; Windows PowerShell doesn't accept it."
     },
     {
       "id": "posix-rsync",
@@ -1638,7 +1778,8 @@
       ],
       "kind": "command",
       "example": "rsync -av src/ dst/",
-      "explain_zh": "rsync 在 macOS/Linux 自带，Windows 一般没有。"
+      "explain_zh": "rsync 在 macOS/Linux 自带，Windows 一般没有。",
+      "explain_en": "rsync ships with macOS/Linux; Windows usually lacks it."
     },
     {
       "id": "posix-nohup",
@@ -1648,7 +1789,8 @@
       ],
       "kind": "command",
       "example": "nohup ./run.sh &",
-      "explain_zh": "nohup 是 Unix 后台运行方式。"
+      "explain_zh": "nohup 是 Unix 后台运行方式。",
+      "explain_en": "nohup is the Unix way to keep a process running in the background."
     },
     {
       "id": "posix-ps-aux",
@@ -1658,7 +1800,8 @@
       ],
       "kind": "command",
       "example": "ps aux",
-      "explain_zh": "ps 是 Unix 进程查看命令，Windows 用 tasklist。"
+      "explain_zh": "ps 是 Unix 进程查看命令，Windows 用 tasklist。",
+      "explain_en": "ps is the Unix process viewer; Windows uses tasklist."
     },
     {
       "id": "posix-kill-9",
@@ -1668,7 +1811,8 @@
       ],
       "kind": "command",
       "example": "kill -9 1234",
-      "explain_zh": "kill 信号是 Unix 用法，Windows 用 taskkill /F。"
+      "explain_zh": "kill 信号是 Unix 用法，Windows 用 taskkill /F。",
+      "explain_en": "kill signals are a Unix idiom; Windows uses taskkill /F."
     },
     {
       "id": "posix-crontab",
@@ -1678,7 +1822,8 @@
       ],
       "kind": "command",
       "example": "crontab -e",
-      "explain_zh": "cron 是 Unix 定时任务，Windows 用任务计划程序。"
+      "explain_zh": "cron 是 Unix 定时任务，Windows 用任务计划程序。",
+      "explain_en": "cron is Unix scheduling; Windows uses Task Scheduler."
     },
     {
       "id": "posix-ssh-keygen",
@@ -1688,7 +1833,8 @@
       ],
       "kind": "command",
       "example": "ssh-keygen -t ed25519",
-      "explain_zh": "ssh-keygen 通常随 Unix OpenSSH 提供。"
+      "explain_zh": "ssh-keygen 通常随 Unix OpenSSH 提供。",
+      "explain_en": "ssh-keygen usually comes with Unix OpenSSH."
     },
     {
       "id": "posix-var-default",
@@ -1698,7 +1844,8 @@
       ],
       "kind": "syntax",
       "example": "${PORT:-3000}",
-      "explain_zh": "bash 的参数默认值展开，cmd/PowerShell 语法不同。"
+      "explain_zh": "bash 的参数默认值展开，cmd/PowerShell 语法不同。",
+      "explain_en": "bash default-value expansion; cmd and PowerShell syntax differ."
     },
     {
       "id": "posix-double-bracket",
@@ -1708,7 +1855,8 @@
       ],
       "kind": "syntax",
       "example": "[[ -f package.json ]]",
-      "explain_zh": "bash/zsh 的 [[ ]] 条件判断，PowerShell 用 Test-Path。"
+      "explain_zh": "bash/zsh 的 [[ ]] 条件判断，PowerShell 用 Test-Path。",
+      "explain_en": "bash/zsh [[ ]] tests; PowerShell uses Test-Path."
     },
     {
       "id": "posix-here-string",
@@ -1718,7 +1866,8 @@
       ],
       "kind": "syntax",
       "example": "<<< \"$var\"",
-      "explain_zh": "bash 的 here-string，只在 bash/zsh 里可用。"
+      "explain_zh": "bash 的 here-string，只在 bash/zsh 里可用。",
+      "explain_en": "bash here-string, available only in bash/zsh."
     },
     {
       "id": "posix-env-prefix",
@@ -1728,7 +1877,8 @@
       ],
       "kind": "syntax",
       "example": "NODE_ENV=production npm start",
-      "explain_zh": "命令前临时设置环境变量是 Unix 写法，PowerShell 会当成参数。"
+      "explain_zh": "命令前临时设置环境变量是 Unix 写法，PowerShell 会当成参数。",
+      "explain_en": "Setting an env var in front of a command is Unix syntax; PowerShell treats it as an argument."
     }
   ]
 }
