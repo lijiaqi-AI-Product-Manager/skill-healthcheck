@@ -1,6 +1,6 @@
 {
   "name": "skill-healthcheck",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Find agent skills that silently stopped working: upstream description/name changes, deleted repos, shadowed or dropped skills, and when your agent's behavior changed.",
   "type": "module",
   "license": "MIT",

@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.0.1
+
+Maintenance release: no change to how any check behaves.
+
+**Packaging**
+- The published tarball now ships only `dist` plus the changelog; every `README.*.md`, `LICENSE` and `package.json` are still included automatically.
+- `prepare` is set, so installing straight from the repository (`npm install github:lijiaqimun-coder/skill-healthcheck`) builds the CLI instead of failing on a missing `dist/cli.js`.
+- `vitest` moved from 3.2.7 to 5.0.5; the dependency audit is now clean.
+
+**Developer experience**
+- Test timeout raised to 30 s: the git-backed tests spawn real repositories and the Windows CI runners routinely exceeded the 5 s default.
+- Added `.gitattributes` (LF everywhere, CRLF only for PowerShell), `.editorconfig`, `.nvmrc`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, issue and pull-request templates, and a weekly Dependabot config.
+- `--help` documents `--name` (filter `log` by skill) and `--force` (overwrite sources with `adopt --repo`), in both languages.
+
+**Docs**
+- A static one-screen screenshot sits above the demo GIF, so the first thing you see renders instantly.
+- A 1280×640 social preview card lives in `docs/social-preview.png`.
+- The install section mentions the npmmirror registry for users in mainland China, and the READMEs link to `CONTRIBUTING.md` and `SECURITY.md`.
+- An npm version badge in all eight READMEs; the repository homepage points at the npm page.
+
 ## 1.0.0
 
 First stable release: the `skill-healthcheck` CLI and the `dsh-skill-healthcheck` plugin for DeepSeek Harness.
