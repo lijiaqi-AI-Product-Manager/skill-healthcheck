@@ -187,12 +187,14 @@ const zh = {
   --offline        不联网（不查上游、不查 npm）
   --no-sessions    不读会话日志
   --since <日期>   log/why 的起始时间，如 2026-10-01
+  --name <技能名>  只在 log 里看这一个技能
   --lang <zh|en>   输出语言，默认跟随系统
   --explain        用大模型把上游改动翻成一句人话（可选；需要 ANTHROPIC_API_KEY、DEEPSEEK_API_KEY
                    或 SKILL_HEALTHCHECK_LLM_BASE_URL；只发送技能文本，不发送会话日志）
   --platform <dsh|generic>   默认自动识别
   --profile <名字> dsh profile，默认 desktop
   --cwd <目录>     以哪个项目目录为准（影响项目级技能）
+  --force          覆盖已登记的来源（配合 adopt --repo）
 
 退出码：0 正常，1 有失效项，2 用法错误。
 它只读你的技能和配置，从不修改、从不自动更新。记录保存在 ~/.skill-healthcheck/。`,
@@ -401,6 +403,7 @@ Options
   --offline        no network (no upstream or npm checks)
   --no-sessions    don't read session logs
   --since <date>   start time for log/why, e.g. 2026-10-01
+  --name <skill>   only show this skill in log
   --lang <zh|en>   output language, defaults to your system locale
   --explain        add a one-sentence LLM explanation of upstream changes (optional; needs
                    ANTHROPIC_API_KEY, DEEPSEEK_API_KEY or SKILL_HEALTHCHECK_LLM_BASE_URL;
@@ -408,6 +411,7 @@ Options
   --platform <dsh|generic>   detected automatically by default
   --profile <name> dsh profile, default desktop
   --cwd <dir>      project directory to use (affects project-level skills)
+  --force          overwrite already registered sources (with adopt --repo)
 
 Exit codes: 0 healthy, 1 something is broken, 2 usage error.
 Read-only: it never modifies or auto-updates anything. The journal lives in ~/.skill-healthcheck/.`,
