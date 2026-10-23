@@ -56,17 +56,17 @@ export function assessImpact(input: ImpactInput): Finding[] {
     add('description-changed', severity, removed.length > 0 ? t('impact.descChanged', summary) : t('impact.descExpanded', summary), detail)
   }
 
-  if (input.catalogMaxLength) {
+  // Length rules need a known catalog limit, but "it grew a lot" does not: report the growth
+  // on every platform, or Claude Code/Codex users never learn about a bloated description.
+  const beforeLen = normalizeSpace(before.description).length
+  const afterLen = normalizeSpace(after.description).length
+  if (input.catalogMaxLength && afterLen > input.catalogMaxLength && beforeLen <= input.catalogMaxLength) {
     const max = input.catalogMaxLength
-    const beforeLen = normalizeSpace(before.description).length
-    const afterLen = normalizeSpace(after.description).length
-    if (afterLen > max && beforeLen <= max) {
-      const shown = catalogDescription(after.description, max)
-      const lost = normalizeSpace(after.description).slice(max - 3)
-      add('description-truncated', 'high', t('impact.truncated', afterLen, max), [t('impact.hiddenTail', clip(lost, 80)), t('impact.catalogShows', clip(shown, 80))])
-    } else if (afterLen > beforeLen * 1.5 && afterLen - beforeLen > 120) {
-      add('description-grew', 'low', t('impact.descGrew', afterLen - beforeLen))
-    }
+    const shown = catalogDescription(after.description, max)
+    const lost = normalizeSpace(after.description).slice(max - 3)
+    add('description-truncated', 'high', t('impact.truncated', afterLen, max), [t('impact.hiddenTail', clip(lost, 80)), t('impact.catalogShows', clip(shown, 80))])
+  } else if (afterLen > beforeLen * 1.5 && afterLen - beforeLen > 120) {
+    add('description-grew', 'low', t('impact.descGrew', afterLen - beforeLen))
   }
 
   if (input.scripts?.added.length) {
@@ -112,8 +112,12 @@ export function newPlatformTokens(beforeText: string, afterText: string, os: OsN
       continue
     }
     const m = re.exec(afterText)
-    if (!m || re.test(beforeText)) continue
-    hits.push({ label: token.only_on.map(osLabel).join('/'), match: m[0].trim(), explain: tokenExplain(token) })
+    if (!m) continue
+    // Dedupe on the matched text, not on the rule: replacing Get-ChildItem with Get-Process is
+    // a new platform dependency even though the same rule matched before.
+    const hit = m[0].trim()
+    if (!hit || beforeText.includes(hit)) continue
+    hits.push({ label: token.only_on.map(osLabel).join('/'), match: hit, explain: tokenExplain(token) })
   }
   return hits
 }
@@ -150,8 +154,18 @@ function originalCase(word: string, source: string): string {
   return i >= 0 ? source.slice(i, i + word.length) : word
 }
 
-function stem(w: string): string {
-  return /^[a-z]+$/.test(w) && w.length > 4 ? w.replace(/(ing|ed|es|s)$/, '') : w
+/**
+ * "discovers" -> "discover", "running" -> "run", "classes" -> "class".
+ * Crude on purpose: both sides get the same treatment, so word-form edits are not reported
+ * as lost triggers. Exported because `why` matches symptom words the same way.
+ */
+export function stem(w: string): string {
+  if (!/^[a-z]+$/.test(w) || w.length < 4) return w
+  if (w.endsWith('ies')) return `${w.slice(0, -3)}y`
+  if (/(ches|shes|sses|xes|zes)$/.test(w)) return w.slice(0, -2)
+  if (w.endsWith('ing') || w.endsWith('ed')) return w.slice(0, -3).replace(/([bcdfgklmnprstvz])\1$/, '$1')
+  if (w.endsWith('s') && !w.endsWith('ss')) return w.slice(0, -1)
+  return w
 }
 
 // Language names are usually the trigger itself ("Chinese writing assistant"); losing one

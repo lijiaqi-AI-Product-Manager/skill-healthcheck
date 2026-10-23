@@ -4,8 +4,9 @@
 // (confirmed via the GitHub API for github.com) counts.
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, realpathSync } from 'node:fs'
-import { isAbsolute, join, relative, resolve } from 'node:path'
-import { parseSkillText, type ParseResult } from './frontmatter.js'
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { parseSkillText, type ParsedSkill, type ParseResult } from './frontmatter.js'
 import { git } from './git.js'
 import { t } from './i18n.js'
 import type { Store } from './journal.js'
@@ -46,7 +47,15 @@ export function parseSourceSpec(spec: string): { url: string; subpath: string; r
   return { url: s, subpath: '' }
 }
 
-export async function resolveProvenance(skill: InstalledSkill, platform: PlatformInfo, sources: SourcesFile): Promise<Provenance> {
+export interface RepoInfo {
+  repo: string
+  url?: string
+}
+
+/** Per-run memo: every skill inside one checkout shares these two git calls. */
+export type ProvenanceCache = Map<string, Promise<RepoInfo | undefined>>
+
+export async function resolveProvenance(skill: InstalledSkill, platform: PlatformInfo, sources: SourcesFile, cache?: ProvenanceCache): Promise<Provenance> {
   if (skill.root.bundled) return { kind: 'bundled' }
   const adopted = sources[skill.skill.name] ?? sources[skill.file]
   if (adopted) return { kind: 'git', url: adopted.url, subpath: adopted.subpath, ref: adopted.ref, via: 'adopt' }
@@ -55,18 +64,46 @@ export async function resolveProvenance(skill: InstalledSkill, platform: Platfor
     const spec = parseSourceSpec(meta)
     if (spec) return { kind: 'git', ...spec, via: 'metadata' }
   }
-  const top = await git(['-C', skill.dir, 'rev-parse', '--show-toplevel'], { timeoutMs: 10_000 })
-  if (!top.ok) return { kind: 'unknown' }
-  const repo = resolve(top.stdout.trim())
+  // Skills outside a checkout are the common case. Walking up for .git costs a few stats;
+  // `git rev-parse` costs a process spawn per skill, which is 10-30ms each on Windows.
+  const root = findGitRoot(skill.dir)
+  if (!root) return { kind: 'unknown' }
+  const info = await lookupRepo(root, cache)
+  if (!info) return { kind: 'unknown' }
+  const repo = info.repo
   if (samePath(repo, platform.projectRoot) && !samePath(repo, skill.dir)) return { kind: 'project', repo }
-  const remote = await git(['-C', repo, 'config', '--get', 'remote.origin.url'], { timeoutMs: 10_000 })
-  if (!remote.ok || !remote.stdout.trim()) return { kind: 'unknown' }
+  if (!info.url) return { kind: 'unknown' }
   // git reports the real path; resolve ours too, or /var vs /private/var (macOS tmp) and
   // 8.3 short names like C:\Users\RUNNER~1 (Windows) break relative(). Only .native expands 8.3.
   const target = realpathSync.native(skill.kind === 'bundle' ? skill.dir : skill.file)
   const subpath = relative(realpathSync.native(repo), target).replaceAll('\\', '/')
   if (subpath.startsWith('..')) return { kind: 'unknown' }
-  return { kind: 'git', url: remote.stdout.trim(), subpath, via: 'checkout', localRepo: repo }
+  return { kind: 'git', url: info.url, subpath, via: 'checkout', localRepo: repo }
+}
+
+async function lookupRepo(root: string, cache?: ProvenanceCache): Promise<RepoInfo | undefined> {
+  const cached = cache?.get(root)
+  if (cached) return cached
+  const pending = (async (): Promise<RepoInfo | undefined> => {
+    const top = await git(['-C', root, 'rev-parse', '--show-toplevel'], { timeoutMs: 10_000 })
+    if (!top.ok) return undefined
+    const repo = resolve(top.stdout.trim())
+    const remote = await git(['-C', repo, 'config', '--get', 'remote.origin.url'], { timeoutMs: 10_000 })
+    return { repo, url: remote.ok && remote.stdout.trim() ? remote.stdout.trim() : undefined }
+  })()
+  cache?.set(root, pending)
+  return pending
+}
+
+/** Nearest ancestor (or the directory itself) that holds a .git entry; undefined outside a checkout. */
+export function findGitRoot(dir: string): string | undefined {
+  let current = resolve(dir)
+  while (true) {
+    if (existsSync(join(current, '.git'))) return current
+    const parent = dirname(current)
+    if (parent === current) return undefined
+    current = parent
+  }
 }
 
 export interface ScriptDiff {
@@ -109,9 +146,28 @@ type FetchOutcome = FetchedRepo | { ok: false; result: UpstreamResult }
 export function isSafeGitUrl(url: string): boolean {
   if (!url || url.startsWith('-') || /[\0\r\n]/.test(url)) return false
   if (/^[a-z][a-z0-9+.-]*::/i.test(url)) return false
-  if (/^(https?|ssh|git|file):\/\/[^\s]+$/i.test(url)) return !/^file:\/\/-/i.test(url)
-  if (/^[\w.-]+@[\w.-]+:[^\s]+$/.test(url)) return true
+  if (/^(https?|ssh|git|file):\/\/[^\s]+$/i.test(url)) {
+    if (/^file:\/\/-/i.test(url)) return false
+    // A host that starts with "-" is an ssh option in disguise: ssh://-oProxyCommand=…
+    try {
+      if (new URL(url).hostname.startsWith('-')) return false
+    } catch {
+      return false
+    }
+    return true
+  }
+  // scp-style (git@host:path): the same option-injection risk lives in the user/host part.
+  if (/^[\w.-]+@[\w.-]+:[^\s]+$/.test(url)) return !/@-/.test(url)
   return isAbsolute(url)
+}
+
+/** Strip `user:token@` before a URL reaches a report, a log or a CI artifact. */
+export function redactUrl(url: string): string {
+  return url.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/@]+@/i, '$1***@')
+}
+
+export function redactProvenance(p: Provenance): Provenance {
+  return p.kind === 'git' ? { ...p, url: redactUrl(p.url) } : p
 }
 
 export function isSafeRef(ref: string): boolean {
@@ -131,14 +187,20 @@ export class UpstreamChecker {
   async check(skill: InstalledSkill, prov: Extract<Provenance, { kind: 'git' }>): Promise<UpstreamResult> {
     if (this.options.offline) return { state: 'unreachable', detail: t('up.offline') }
     const repo = await this.fetchRepo(prov.url, prov.ref)
-    if (!repo.ok) return repo.result
+    if (!repo.ok) {
+      // A source the skill's author wrote is not the user's invariant: a typo in someone
+      // else's metadata.source must never turn into a critical "deleted repository" that
+      // fails CI. A source the user registered with `adopt` still counts as gone.
+      if (repo.result.state === 'repo-missing' && prov.via === 'metadata') return { state: 'unreachable', detail: repo.result.detail }
+      return repo.result
+    }
     return compareSkill(repo, skill, prov)
   }
 
   /** Fetch a repo into the cache (shared with check()). */
   async fetchRepo(url: string, ref?: string): Promise<FetchOutcome> {
     if (!isSafeGitUrl(url) || (ref !== undefined && !isSafeRef(ref))) {
-      return { ok: false, result: { state: 'unreachable', detail: t('up.suspicious', url.slice(0, 80)) } }
+      return { ok: false, result: { state: 'unreachable', detail: t('up.suspicious', redactUrl(url).slice(0, 80)) } }
     }
     const key = `${url}@${ref ?? 'HEAD'}`
     let fetching = this.fetches.get(key)
@@ -193,16 +255,14 @@ export async function matchRepoSkills(
   checker: UpstreamChecker,
   spec: { url: string; subpath: string; ref?: string },
   skills: InstalledSkill[],
-): Promise<{ ok: true; matches: RepoMatch[]; repoSkills: number } | { ok: false; result: UpstreamResult }> {
+): Promise<{ ok: true; matches: RepoMatch[]; repoSkills: number; truncated: boolean } | { ok: false; result: UpstreamResult }> {
   const repo = await checker.fetchRepo(spec.url, spec.ref)
   if (!repo.ok) return repo
   const tree = await git(['--git-dir', repo.gitDir, 'ls-tree', '-r', '--name-only', repo.commit], { timeoutMs: 60_000 })
   const prefix = spec.subpath ? `${spec.subpath}/` : ''
-  const files = tree.stdout
-    .split('\n')
-    .filter((p) => (p === 'SKILL.md' || p.endsWith('/SKILL.md')) && p.startsWith(prefix))
-    .slice(0, 2000)
-  if (files.length === 0) return { ok: true, matches: [], repoSkills: 0 }
+  const all = tree.stdout.split('\n').filter((p) => (p === 'SKILL.md' || p.endsWith('/SKILL.md')) && p.startsWith(prefix))
+  const files = all.slice(0, 5000)
+  if (files.length === 0) return { ok: true, matches: [], repoSkills: 0, truncated: false }
   const batch = await git(['--git-dir', repo.gitDir, 'cat-file', '--batch'], { input: files.map((p) => `${repo.commit}:${p}`).join('\n') + '\n', timeoutMs: 300_000 })
   const blobs = splitCatFileBatch(batch.stdout)
   const upstream = files.map((file, i) => {
@@ -224,7 +284,7 @@ export async function matchRepoSkills(
     if (sameName.length) matches.push({ skill, subpath: best.subpath, by: 'name', score: best.score })
     else if (best.score >= 0.6) matches.push({ skill, subpath: best.subpath, by: 'content', score: best.score })
   }
-  return { ok: true, matches, repoSkills: files.length }
+  return { ok: true, matches, repoSkills: files.length, truncated: all.length > files.length }
 }
 
 function cacheDirFor(store: Store, url: string): string {
@@ -234,24 +294,58 @@ function cacheDirFor(store: Store, url: string): string {
 async function compareSkill(repo: FetchedRepo, skill: InstalledSkill, prov: Extract<Provenance, { kind: 'git' }>): Promise<UpstreamResult> {
   const { gitDir, commit } = repo
   const file = skillFilePath(prov.subpath, skill.kind)
-  const shown = await git(['--git-dir', gitDir, 'show', `${commit}:${file}`], { timeoutMs: 60_000 })
-  if (shown.ok) {
-    return diffAgainstLocal(repo, skill, prov, prov.subpath, shown.stdout)
-  }
-  // Path is gone upstream: moved/renamed or deleted?
-  const moved = await findMovedSkill(gitDir, commit, skill)
-  if (moved) {
-    const raw = await git(['--git-dir', gitDir, 'show', `${commit}:${moved.file}`], { timeoutMs: 60_000 })
+  const shown = await showFile(gitDir, commit, file)
+  if (shown.ok) return diffAgainstLocal(repo, skill, prov, prov.subpath, shown.raw)
+  // A failed `git show` is "the path is gone" only for a specific class of errors. A blob
+  // fetch that failed (blobless clone + flaky network) must never read as a deletion.
+  if (!isMissingPath(shown.stderr)) return { state: 'unreachable', detail: firstLine(shown.stderr) }
+  // Path is gone upstream: moved/renamed or deleted? git's own rename detection goes first:
+  // a renamed *and* rewritten skill still shows up as R087, where line similarity would not.
+  const movedFile = (await findRenamedPath(gitDir, commit, file)) ?? (await findMovedSkill(gitDir, commit, skill))
+  if (movedFile) {
+    const raw = await showFile(gitDir, commit, movedFile)
     if (raw.ok) {
-      const result = await diffAgainstLocal(repo, skill, prov, moved.subpath, raw.stdout)
-      if (result.state === 'current') return { ...result }
-      if (result.state === 'changed') return { ...result, movedTo: moved.subpath || '/' }
+      const subpath = subpathOf(movedFile)
+      const result = await diffAgainstLocal(repo, skill, prov, subpath, raw.raw)
+      if (result.state === 'current') return result
+      if (result.state === 'changed') return { ...result, movedTo: subpath || '/' }
       return result
     }
   }
   const log = await git(['--git-dir', gitDir, 'log', '-1', '--format=%H%x09%cI', commit, '--', file], { timeoutMs: 60_000 })
   const [deletedIn, date] = log.stdout.trim().split('\t')
   return { state: 'removed-in-repo', commit: deletedIn || commit, date }
+}
+
+async function showFile(gitDir: string, commit: string, file: string): Promise<{ ok: true; raw: string } | { ok: false; stderr: string }> {
+  const shown = await git(['--git-dir', gitDir, 'show', `${commit}:${file}`], { timeoutMs: 60_000 })
+  return shown.ok ? { ok: true, raw: shown.stdout } : { ok: false, stderr: shown.stderr }
+}
+
+/** Was the commit valuable and the path really absent, or did the read itself fail? */
+function isMissingPath(stderr: string): boolean {
+  if (/could not fetch|unable to fetch|unable to access|Could not resolve|timed out|RPC failed|early EOF|fetch-pack|Connection (refused|reset)|bad object/i.test(stderr)) return false
+  return /does not exist in|exists on disk, but not in|path '.*' does not exist|Not a valid object name|invalid object name|no such path/i.test(stderr)
+}
+
+/** The path git recorded for a detected rename, if any commit that touched `file` renamed it. */
+async function findRenamedPath(gitDir: string, commit: string, file: string): Promise<string | undefined> {
+  const log = await git(['--git-dir', gitDir, 'log', '-1', '--format=%H', commit, '--', file], { timeoutMs: 60_000 })
+  const sha = log.stdout.trim().split('\n')[0]
+  if (!sha) return undefined
+  const show = await git(['--git-dir', gitDir, 'show', '--name-status', '-M', '--format=', sha], { timeoutMs: 60_000 })
+  if (!show.ok) return undefined
+  for (const line of show.stdout.split('\n')) {
+    const m = /^R\d+\t(.+)\t(.+)$/.exec(line.trim())
+    if (m && m[1] === file) return m[2]
+  }
+  return undefined
+}
+
+/** `path/to/SKILL.md` -> `path/to`; a flat `.md` file keeps its full path. */
+function subpathOf(file: string): string {
+  if (file === 'SKILL.md') return ''
+  return file.endsWith('/SKILL.md') ? file.slice(0, -'/SKILL.md'.length) : file
 }
 
 async function diffAgainstLocal(
@@ -263,7 +357,7 @@ async function diffAgainstLocal(
 ): Promise<UpstreamResult> {
   const { gitDir, commit } = repo
   const scripts = await scriptDiff(gitDir, commit, subpath, skill)
-  if (normalize(upstreamRaw) === normalize(skill.raw) && !scripts.added.length && !scripts.changed.length && !scripts.removed.length) {
+  if (sameSkillText(upstreamRaw, skill.raw) && !scripts.added.length && !scripts.changed.length && !scripts.removed.length) {
     return { state: 'current', commit }
   }
   const file = skillFilePath(subpath, skill.kind)
@@ -282,6 +376,26 @@ async function diffAgainstLocal(
     scripts,
     localModified,
   }
+}
+
+/** Same content once line endings, a BOM and frontmatter-only metadata edits are ignored. */
+function sameSkillText(upstreamRaw: string, localRaw: string): boolean {
+  if (normalize(upstreamRaw) === normalize(localRaw)) return true
+  const up = parseSkillText(upstreamRaw)
+  const mine = parseSkillText(localRaw)
+  if (!up.ok || !mine.ok) return false
+  return sameParsedSkill(up.skill, mine.skill)
+}
+
+/** Everything a check looks at; `metadata` (where adopt recommends recording the source) is not. */
+function sameParsedSkill(a: ParsedSkill, b: ParsedSkill): boolean {
+  return (
+    a.name === b.name &&
+    a.description === b.description &&
+    a.invocation.modelInvocable === b.invocation.modelInvocable &&
+    a.invocation.userInvocable === b.invocation.userInvocable &&
+    normalize(a.body) === normalize(b.body)
+  )
 }
 
 async function scriptDiff(gitDir: string, commit: string, subpath: string, skill: InstalledSkill): Promise<ScriptDiff> {
@@ -320,13 +434,14 @@ async function localScriptShas(skill: InstalledSkill): Promise<Record<string, st
   return out
 }
 
-async function findMovedSkill(gitDir: string, commit: string, skill: InstalledSkill): Promise<{ subpath: string; file: string } | undefined> {
+async function findMovedSkill(gitDir: string, commit: string, skill: InstalledSkill): Promise<string | undefined> {
   const tree = await git(['--git-dir', gitDir, 'ls-tree', '-r', '--name-only', commit], { timeoutMs: 60_000 })
   if (!tree.ok) return undefined
   const candidates = tree.stdout
     .split('\n')
-    .filter((p) => p === 'SKILL.md' || p.endsWith('/SKILL.md'))
-    .slice(0, 300)
+    // A flat skill is a bare `.md` file, so it can never match a `/SKILL.md` pattern.
+    .filter((p) => (skill.kind === 'flat' ? p.endsWith('.md') : p === 'SKILL.md' || p.endsWith('/SKILL.md')))
+    .slice(0, 2000)
   if (candidates.length === 0) return undefined
   const batch = await git(['--git-dir', gitDir, 'cat-file', '--batch'], { input: candidates.map((p) => `${commit}:${p}`).join('\n') + '\n', timeoutMs: 120_000 })
   if (!batch.ok) return undefined
@@ -341,7 +456,7 @@ async function findMovedSkill(gitDir: string, commit: string, skill: InstalledSk
   })
   const found = best as { file: string; score: number } | undefined
   if (!found || found.score < 0.6) return undefined
-  return { file: found.file, subpath: found.file === 'SKILL.md' ? '' : found.file.slice(0, -'/SKILL.md'.length) }
+  return found.file
 }
 
 function splitCatFileBatch(out: string): Array<string | undefined> {
@@ -377,6 +492,20 @@ export function similarity(a: string, b: string): number {
 
 async function classifyFetchFailure(url: string, stderr: string): Promise<UpstreamResult> {
   const detail = firstLine(stderr.replace(/^(remote|fatal): /gm, ''))
+  // A local source path: a typo is a configuration problem, not "the repository was deleted".
+  // Keep it informational so a stray metadata.source never turns CI red.
+  if (isAbsolute(url) || /^file:\/\//i.test(url)) {
+    let path = url
+    if (/^file:\/\//i.test(url)) {
+      try {
+        path = fileURLToPath(url)
+      } catch {
+        path = url
+      }
+    }
+    if (!existsSync(path)) return { state: 'repo-missing', detail: t('up.localMissing', path) }
+    return { state: 'unreachable', detail }
+  }
   const gh = /github\.com[/:]([\w.-]+)\/([\w.-]+?)(?:\.git)?\/?$/.exec(url)
   const notFound = /repository '.*' not found|Repository not found|does not appear to be a git repository|not found/i.test(stderr)
   const authOrMissing = /could not read Username|Authentication failed|terminal prompts disabled|Permission denied|403/i.test(stderr)
@@ -420,11 +549,16 @@ function skillFilePath(subpath: string, kind: InstalledSkill['kind']): string {
 }
 
 export function normalize(text: string): string {
-  return text.replace(/\r\n/g, '\n').replace(/\s+$/, '')
+  return text.replace(/^\ufeff/, '').replace(/\r\n/g, '\n').replace(/\s+$/, '')
 }
 
 function trimSlashes(s: string): string {
   return s.replace(/^\/+|\/+$/g, '')
+}
+
+/** Paths are case-insensitive on Windows and (by default) macOS, and case-sensitive elsewhere. */
+function foldCase(s: string): string {
+  return process.platform === 'win32' || process.platform === 'darwin' ? s.toLowerCase() : s
 }
 
 function samePath(a: string, b: string): boolean {
@@ -435,7 +569,7 @@ function samePath(a: string, b: string): boolean {
       return resolve(p)
     }
   }
-  return real(a).toLowerCase() === real(b).toLowerCase()
+  return foldCase(real(a)) === foldCase(real(b))
 }
 
 function firstLine(s: string): string {

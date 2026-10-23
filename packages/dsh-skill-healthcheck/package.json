@@ -1,6 +1,6 @@
 {
   "name": "dsh-skill-healthcheck",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "DeepSeek Harness plugin for skill-healthcheck: keeps the skill journal while dsh runs and adds /skill-healthcheck to the chat.",
   "type": "module",
   "main": "lib/index.js",

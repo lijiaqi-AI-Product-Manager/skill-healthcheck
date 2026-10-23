@@ -95,7 +95,7 @@ En China continental el espejo npmmirror suele instalar más rápido: `npm insta
 
 Opciones comunes: `--all` expandir todo, `--json` legible por máquina, `--offline` sin red, `--no-sessions` ignorar los registros de sesión, `--lang zh|en` idioma de salida (por defecto el locale del sistema; también `SKILL_HEALTHCHECK_LANG`), `--explain` una frase llana por cada cambio upstream (ver abajo), `--platform dsh|generic`, `--profile <nombre>`, `--cwd <directorio del proyecto>`.
 
-Códigos de salida: `0` todo bien (las actualizaciones disponibles cuentan como bien), `1` algo está roto (incluidos skills descartados, tapados o anidados demasiado profundo, y plugins rotos), `2` error de uso. Encaja directamente en CI. Cada hallazgo tiene un código estable para consumidores de `--json`: [docs/findings.md](docs/findings.md).
+Códigos de salida: `0` todo bien (las actualizaciones disponibles cuentan como bien), `1` algo está roto (incluidos skills descartados, tapados o anidados demasiado profundo, y plugins rotos), `2` error de uso, `3` error interno. Encaja directamente en CI. Cada hallazgo tiene un código estable para consumidores de `--json`: [docs/findings.md](docs/findings.md).
 
 ¿Copiaste tus skills sin su `.git`? Ejecuta una vez `skill-healthcheck adopt --repo <el repositorio del que vinieron>` para que funcionen las comprobaciones upstream. Los skills cuya carpeta se renombró se emparejan por contenido.
 

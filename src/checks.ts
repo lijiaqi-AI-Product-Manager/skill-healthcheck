@@ -3,7 +3,7 @@
 import { relative } from 'node:path'
 import { catalogDescription } from './frontmatter.js'
 import { t } from './i18n.js'
-import { localDay, usageStats, type CatalogTimeline, type SessionSummary } from './sessions.js'
+import { localDay, QUIET_SESSIONS, usageStats, type CatalogTimeline, type SessionSummary } from './sessions.js'
 import type { Finding, Inventory } from './types.js'
 
 const DAY = 86_400_000
@@ -86,8 +86,14 @@ export function usageFindings(inv: Inventory, sessions: SessionSummary[], timeli
   if (sessions.length === 0) return out
   for (const s of inv.active) {
     const usage = usageStats(sessions, s.skill.name)
-    if (usage.calls < 2 || usage.lastCall === undefined || usage.quietSessions < 3) continue
-    const change = timeline.changes.filter((c) => c.name === s.skill.name && c.t <= usage.lastCall! + 14 * DAY && c.t >= usage.lastCall! - DAY).at(-1)
+    if (usage.calls < 2 || usage.lastCall === undefined || usage.quietSessions < QUIET_SESSIONS) continue
+    // The change must be able to explain the silence: the model's catalog last showed the old
+    // text around the time it was still being called, and the new text appeared within two
+    // weeks after that. A description edited long after the skill was already unused is not
+    // the reason it stopped being called.
+    const change = timeline.changes
+      .filter((c) => c.name === s.skill.name && c.t <= usage.lastCall! + 14 * DAY && usage.lastCall! >= c.prevT - DAY)
+      .sort((a, b) => b.t - a.t)[0]
     const detail = [t('usage.lastCall', localDay(usage.lastCall), usage.quietSessions)]
     if (change) detail.push(t('usage.descChangedOn', localDay(change.t)))
     out.push({

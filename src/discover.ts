@@ -147,10 +147,12 @@ function readText(path: string): string | undefined {
 }
 
 function canonical(path: string): string {
+  // Case folding only where the filesystem does it; on Linux `/Foo` and `/foo` are two roots.
+  const fold = process.platform === 'win32' || process.platform === 'darwin' ? (s: string) => s.toLowerCase() : (s: string) => s
   try {
-    return realpathSync.native(path).toLowerCase()
+    return fold(realpathSync.native(path))
   } catch {
-    return path.toLowerCase()
+    return fold(path)
   }
 }
 
@@ -159,7 +161,17 @@ export function listScripts(entry: Pick<SkillEntry, 'dir' | 'kind'>): string[] {
   if (entry.kind !== 'bundle') return []
   const base = join(entry.dir, 'scripts')
   const out: string[] = []
+  // A symlink loop under scripts/ would otherwise recurse until the stack dies.
+  const seen = new Set<string>()
   const walk = (current: string) => {
+    let real: string
+    try {
+      real = realpathSync.native(current)
+    } catch {
+      return
+    }
+    if (seen.has(real)) return
+    seen.add(real)
     let names: string[]
     try {
       names = readdirSync(current)

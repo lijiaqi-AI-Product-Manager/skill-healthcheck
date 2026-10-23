@@ -95,7 +95,7 @@ In mainland China the npmmirror mirror usually installs faster: `npm install -g 
 
 Common options: `--all` expand everything, `--json` machine-readable, `--offline` no network, `--no-sessions` skip session logs, `--lang zh|en` output language (defaults to your system locale; also `SKILL_HEALTHCHECK_LANG`), `--explain` one plain-language sentence per upstream change (see below), `--platform dsh|generic`, `--profile <name>`, `--cwd <project dir>`.
 
-Exit codes: `0` all good (available updates count as good), `1` something is broken (including dropped, shadowed, or too-deeply-nested skills and broken plugins), `2` usage error. Drop it straight into CI. Every finding has a stable code for `--json` consumers: [docs/findings.md](docs/findings.md).
+Exit codes: `0` all good (available updates count as good), `1` something is broken (including dropped, shadowed, or too-deeply-nested skills and broken plugins), `2` usage error, `3` the tool itself failed. Drop it straight into CI. Every finding has a stable code for `--json` consumers: [docs/findings.md](docs/findings.md).
 
 Copied your skills over without their `.git`? Run `skill-healthcheck adopt --repo <the repo they came from>` once so upstream checks can work. Skills whose folder was renamed are matched by content.
 

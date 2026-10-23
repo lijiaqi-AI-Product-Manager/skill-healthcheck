@@ -95,7 +95,7 @@ En Chine continentale le miroir npmmirror est généralement plus rapide : `npm 
 
 Options courantes : `--all` tout déplier, `--json` lisible par machine, `--offline` sans réseau, `--no-sessions` ignorer les journaux de session, `--lang zh|en` langue de sortie (par défaut la locale du système ; aussi `SKILL_HEALTHCHECK_LANG`), `--explain` une phrase claire par changement upstream (voir plus bas), `--platform dsh|generic`, `--profile <nom>`, `--cwd <dossier du projet>`.
 
-Codes de sortie : `0` tout va bien (les mises à jour disponibles comptent comme bon), `1` quelque chose est cassé (y compris skills écartés, masqués ou imbriqués trop profond, et plugins cassés), `2` erreur d'usage. À brancher directement dans la CI. Chaque constat a un code stable pour les consommateurs de `--json` : [docs/findings.md](docs/findings.md).
+Codes de sortie : `0` tout va bien (les mises à jour disponibles comptent comme bon), `1` quelque chose est cassé (y compris skills écartés, masqués ou imbriqués trop profond, et plugins cassés), `2` erreur d'usage, `3` erreur interne. À brancher directement dans la CI. Chaque constat a un code stable pour les consommateurs de `--json` : [docs/findings.md](docs/findings.md).
 
 Vous avez copié vos skills sans leur `.git` ? Lancez une fois `skill-healthcheck adopt --repo <le dépôt d'origine>` pour que les vérifications upstream fonctionnent. Les skills dont le dossier a été renommé sont appariés par contenu.
 

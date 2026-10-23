@@ -95,7 +95,7 @@ git clone https://github.com/lijiaqimun-coder/skill-healthcheck && cd skill-heal
 
 공통 옵션: `--all` 전체 펼치기, `--json` 기계 판독용, `--offline` 네트워크 차단, `--no-sessions` 세션 로그 무시, `--lang zh|en` 출력 언어(기본값은 시스템 로케일, `SKILL_HEALTHCHECK_LANG`으로도 지정), `--explain` 업스트림 변경마다 한 문장 해설(아래 참고), `--platform dsh|generic`, `--profile <이름>`, `--cwd <프로젝트 디렉터리>`.
 
-종료 코드: `0` 문제 없음(업데이트 가능도 정상으로 봄), `1` 고장(버려짐·가려짐·너무 깊은 중첩·고장 난 플러그인 포함), `2` 사용법 오류. 그대로 CI에 넣을 수 있습니다. 모든 발견 항목에는 `--json` 소비자를 위한 고정 코드가 있습니다: [docs/findings.md](docs/findings.md).
+종료 코드: `0` 문제 없음(업데이트 가능도 정상으로 봄), `1` 고장(버려짐·가려짐·너무 깊은 중첩·고장 난 플러그인 포함), `2` 사용법 오류, `3` 도구 자체 오류. 그대로 CI에 넣을 수 있습니다. 모든 발견 항목에는 `--json` 소비자를 위한 고정 코드가 있습니다: [docs/findings.md](docs/findings.md).
 
 `.git` 없이 skill을 복사해 오셨나요? `skill-healthcheck adopt --repo <복사해 온 저장소>`를 한 번 실행하면 업스트림 검사가 동작합니다. 폴더 이름이 바뀐 skill은 내용으로 대조합니다.
 

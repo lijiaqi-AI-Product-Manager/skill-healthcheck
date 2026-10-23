@@ -7,9 +7,9 @@ import { t } from './i18n.js'
 import type { JournalEvent, Store } from './journal.js'
 import { loadLexicon, signalHits, type Symptom } from './lexicon.js'
 import { parseSkillText } from './frontmatter.js'
-import { languageByDay, localDay, usageStats, type CatalogTimeline, type SessionSummary } from './sessions.js'
+import { languageByDay, localDay, QUIET_SESSIONS, usageStats, type CatalogTimeline, type SessionSummary } from './sessions.js'
 import type { Inventory } from './types.js'
-import { wordDiff } from './impact.js'
+import { stem, wordDiff } from './impact.js'
 
 const DAY = 86_400_000
 
@@ -94,13 +94,13 @@ function grams(s: string): Set<string> {
       if (!FILLER_BIGRAMS.has(g)) out.add(g)
     }
   }
-  for (const w of s.match(/[a-z]{3,}/g) ?? []) if (!['why', 'the', 'now', 'and', 'did', 'does', 'its'].includes(w)) out.add(stem(w))
+  for (const w of s.match(/[a-z]{3,}/g) ?? []) if (!['why', 'the', 'now', 'and', 'did', 'does', 'its'].includes(w)) out.add(stemWord(w))
   return out
 }
 
-/** answering / answers / answered -> answer. Crude, but both sides get the same treatment. */
-function stem(w: string): string {
-  return w.replace(/(ing|ed|es|s)$/, '') || w
+/** answering / answers / answered -> answer. Shared with `impact` so both sides agree. */
+function stemWord(w: string): string {
+  return stem(w) || w
 }
 
 /** First day the assistant's share of Chinese collapsed while the user kept writing Chinese. */
@@ -159,11 +159,15 @@ export function why(params: {
   // 1) What the model actually saw change (session catalogs), including before the first run.
   for (const change of params.timeline.changes) {
     const hits = newHits(change.from, change.to, symptoms)
+    // A rule that used to demand the thing the user now misses is evidence too: this is what
+    // a Chinese-pinned skill looks like when upstream drops the requirement.
+    const lost = lostHits(change.from, change.to, symptoms)
     const { removed, added: addedWords } = wordDiff(change.from, change.to)
-    if (symptoms.length && hits.length === 0 && !notTriggered) continue
-    const base = symptoms.length ? hits.length * 2 + (notTriggered ? 1 + removed.length * 0.5 : 0) : 0.5
+    if (symptoms.length && hits.length === 0 && lost.length === 0 && !notTriggered) continue
+    const base = symptoms.length ? hits.length * 2 + lost.length * 1.5 + (notTriggered ? 1 + removed.length * 0.5 : 0) : 0.5
     bump(change.name, (base + 1) * proximity(change.t), change.t, t('why.catalogChanged', localDay(change.t)), [
       ...hits.map((h) => t('why.added', h)),
+      ...lost.map((h) => t('why.lost', h)),
       ...(removed.length ? [t('why.removedWords', removed.map((w) => `"${w}"`).join(' '))] : []),
       ...(addedWords.length && !hits.length ? [t('why.addedWords', addedWords.map((w) => `"${w}"`).join(' '))] : []),
     ], { from: change.from, to: change.to })
@@ -200,7 +204,7 @@ export function why(params: {
     const names = new Set([...params.inventory.active.map((s) => s.skill.name), ...params.sessions.flatMap((s) => s.skillCalls.map((c) => c.name))])
     for (const name of names) {
       const u = usageStats(params.sessions, name)
-      if (u.calls >= 2 && u.quietSessions >= 2) {
+      if (u.calls >= 2 && u.quietSessions >= QUIET_SESSIONS) {
         bump(name, 2 + Math.min(u.quietSessions, 10) / 5, u.lastCall, t('why.quiet', localDay(u.lastCall!)), [t('why.quietEvidence', u.calls, u.quietSessions)])
       }
     }
@@ -222,6 +226,12 @@ function relevantHits(text: string, symptoms: Symptom[]): string[] {
 function newHits(before: string, after: string, symptoms: Symptom[]): string[] {
   const old = new Set(relevantHits(skillText(before), symptoms).map((h) => h.toLowerCase()))
   return relevantHits(skillText(after), symptoms).filter((h) => !old.has(h.toLowerCase()))
+}
+
+/** Signal phrases that were there before the change and are gone now. */
+function lostHits(before: string, after: string, symptoms: Symptom[]): string[] {
+  const now = new Set(relevantHits(skillText(after), symptoms).map((h) => h.toLowerCase()))
+  return relevantHits(skillText(before), symptoms).filter((h) => !now.has(h.toLowerCase()))
 }
 
 /** Description + body of a SKILL.md, or the text itself when it's just a description. */

@@ -1,5 +1,62 @@
 # Changelog
 
+## 1.0.2
+
+Correctness release, driven by six independent external reviews of 1.0.1. Most of these were
+wrong *conclusions* rather than crashes: a false "deleted upstream", a false "repo gone", a
+permanent "changed" for adopted skills, and a session scanner that skipped project folders
+with a dot in the name.
+
+**Fixed**
+- **Node < 22.15 no longer dies on startup.** `zstdDecompressSync` was a static import, so
+  `npx skill-healthcheck --version` raised `SyntaxError` on Node 22.13/22.14 before anything
+  ran. It is now read off the `node:zlib` namespace, and the CLI checks `engines` itself and
+  prints one line with the current version instead of an ESM stack trace.
+- **A renamed-and-rewritten skill is no longer reported as deleted.** git's own rename
+  detection (`git show --name-status -M`) runs before the content-similarity fallback, so
+  `removed-upstream` is reserved for paths that really left the repository.
+- **A failed `git show` is no longer treated as a deletion.** Blob fetches that fail in a
+  blobless clone now report `upstream-unreachable`, not "your copy is unmaintained".
+- **A missing local `metadata.source` no longer fails CI.** A third-party typo is reported as
+  `upstream-unreachable`; a local repository you registered yourself with `adopt` still counts
+  as gone.
+- **`metadata.source` no longer causes a permanent "upstream changed".** Comparison falls back
+  to the parsed skill (name, description, invocation, body) when only frontmatter metadata
+  differs, which is the field the README tells you to add.
+- **Session logs under `ws.v2` / `my.project` are found again.** The walker skipped every
+  directory whose name contained a dot; it now skips only `node_modules`, `.git` and `.cache`.
+- **`went-quiet` no longer blames a description that changed after the skill went unused.** The
+  change must sit around the last call (old text still listed then, new text within two weeks).
+- **A swapped platform command is reported.** `Get-ChildItem` → `Get-Process` used to be
+  deduplicated away by rule id; deduplication now compares the matched text.
+- **`description-grew` is checked on every platform**, not only where a catalog limit is known.
+- **BOM-prefixed `SKILL.md` files are valid.** Windows editors write a BOM; it is no longer a
+  critical "missing frontmatter".
+- **Word-form edits are not lost triggers.** `running`/`run`, `copies`/`copy`, `articles`/`article`
+  fold to the same stem.
+- **`ssh://-oProxyCommand=…` is rejected**, like other option-shaped hosts.
+- **Credential-bearing URLs are redacted** in `--json`, `adopt` output and error details.
+- Case folding for path identity now happens only on Windows and macOS.
+
+**Changed**
+- `--json` has `schemaVersion: 1` and `pluginFindings` (documented in `docs/findings.md` but
+  previously missing from the output). `docs/findings.md` now ships in the tarball.
+- Exit code `3` for an internal failure; `2` stays "usage error". All eight READMEs, `--help`
+  and `docs/findings.md` document it.
+- `@anthropic-ai/sdk` moved to `optionalDependencies`: `--explain` loads it lazily and most
+  users never need it, but it was 20 MB of every install.
+- The journal directory is created `0700` and its files `0600`.
+- One `git rev-parse` per checkout instead of one per skill, and a single pass over session
+  calls instead of one per skill.
+- CI now pins Node 22.19.0 (the declared minimum) and runs a Node 22.13.1 job that asserts the
+  friendly message.
+
+**Data**
+- The symptom lexicon gains Chinese-direction skill signals (`respond in Chinese`, `用中文回答`,
+  …) and a "lost signal" path in `why`: dropping a language pin is now evidence, not silence.
+  New complaint phrasings ("它现在怎么不回复中文了", "它不再调用我的技能了", "回答太长了我受不了")
+  match their symptoms.
+
 ## 1.0.1
 
 Maintenance release: no change to how any check behaves.

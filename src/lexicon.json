@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "sources": "symptoms and platform_tokens drafted by DSH (research/lexicon.json), merged and pruned for false positives",
   "symptoms": [
     {
@@ -25,7 +25,13 @@
         "answers in English now",
         "mixed Chinese and English",
         "why is it writing in English",
-        "switched to English without asking"
+        "switched to English without asking",
+        "不回复中文",
+        "不说中文了",
+        "老是说英文",
+        "改用英文回答",
+        "怎么不说中文了",
+        "不再说中文"
       ],
       "skill_signals": {
         "phrases": [
@@ -42,7 +48,18 @@
           "用英文",
           "answer in English",
           "respond only in English",
-          "用英文回答"
+          "用英文回答",
+          "respond in Chinese",
+          "reply in Chinese",
+          "answer in Chinese",
+          "use Chinese",
+          "in Chinese only",
+          "用中文回答",
+          "中文回答",
+          "始终使用中文",
+          "只用中文",
+          "必须说中文",
+          "中文回复"
         ],
         "regex": [
           "\\b(always|only)\\s+(respond|reply|write|answer)\\s+in\\s+english\\b",
@@ -50,7 +67,9 @@
           "\\b(always|only|must|should)\\s+(respond|reply|answer|write|speak)\\s+in\\s+English\\b",
           "\\bEnglish\\s+(responses?|replies|answers)\\s+only\\b",
           "\\bin\\s+English\\s+(only|at\\s+all\\s+times|by\\s+default)\\b",
-          "(默认|一律|始终|必须).{0,4}(使用|用|说|输出)(英文|英语)"
+          "(默认|一律|始终|必须).{0,4}(使用|用|说|输出)(英文|英语)",
+          "\\b(always|only|must|should)\\s+(respond|reply|answer|write|speak)\\s+in\\s+Chinese\\b",
+          "(始终|一律|必须|只用|仅用|默认).{0,4}(使用|用|说|输出|回复)(中文|汉语)"
         ]
       },
       "explain_zh": "技能里要求「用英文回答 / 使用英文术语」或把语言写死的规则，会压过用户的语言偏好。",
@@ -134,7 +153,9 @@
         "too short to be useful",
         "walls of text",
         "it barely explains anything",
-        "used to be more detailed"
+        "used to be more detailed",
+        "回答太长",
+        "回答太长了"
       ],
       "skill_signals": {
         "phrases": [
@@ -426,14 +447,19 @@
           "add comments",
           "添加注释",
           "命名规范",
-          "缩进"
+          "缩进",
+          "不要用 any",
+          "必须用 TypeScript",
+          "使用 TypeScript",
+          "严格模式"
         ],
         "regex": [
           "\\badd\\s+(inline\\s+|doc\\s+)?comments?\\b",
           "\\b\\d+[- ]space\\s+indentation\\b",
           "\\b(camelCase|snake_case|kebab-case|PascalCase)\\b",
           "\\b(prettier|eslint|gofmt|black|rustfmt)\\b",
-          "(添加|写|补).{0,4}注释|命名(规范|风格|约定)"
+          "(添加|写|补).{0,4}注释|命名(规范|风格|约定)",
+          "(必须|一律|不要|禁止|只能).{0,6}(TypeScript|typescript|\\bany\\b|\\bvar\\b)"
         ]
       },
       "explain_zh": "「加注释 / 统一命名 / 用某个格式化器」这类代码规范，会覆盖项目原有的风格。",
@@ -505,7 +531,11 @@
         "不调用 skill",
         "barely uses skills",
         "stopped using skills",
-        "skills are never used"
+        "skills are never used",
+        "不再调用",
+        "不再触发",
+        "不再调用了",
+        "不自动调用了"
       ],
       "skill_signals": {
         "phrases": [
@@ -514,7 +544,10 @@
           "do not trigger",
           "不再使用",
           "改用",
-          "已废弃"
+          "已废弃",
+          "不要再调用",
+          "禁止调用",
+          "不要自动使用"
         ],
         "regex": [
           "\\b(do\\s+not|don't|never)\\s+use\\s+(this|the)\\s+skill\\b",

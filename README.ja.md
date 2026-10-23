@@ -95,7 +95,7 @@ git clone https://github.com/lijiaqimun-coder/skill-healthcheck && cd skill-heal
 
 共通オプション: `--all` すべて展開、`--json` 機械可読、`--offline` ネットワークなし、`--no-sessions` セッションログを読まない、`--lang zh|en` 出力言語（既定はシステムロケール。`SKILL_HEALTHCHECK_LANG` でも指定可）、`--explain` 上流の変更ごとに一文の平易な解説（下記）、`--platform dsh|generic`、`--profile <名前>`、`--cwd <プロジェクトディレクトリ>`。
 
-終了コード: `0` 問題なし（更新可能も問題なし扱い）、`1` 壊れている（破棄・遮蔽・深すぎるネスト・壊れたプラグインを含む）、`2` 使い方の誤り。そのまま CI に組み込めます。各検出には `--json` 利用者向けの固定コードがあります: [docs/findings.md](docs/findings.md)。
+終了コード: `0` 問題なし（更新可能も問題なし扱い）、`1` 壊れている（破棄・遮蔽・深すぎるネスト・壊れたプラグインを含む）、`2` 使い方の誤り、`3` ツール自体のエラー。そのまま CI に組み込めます。各検出には `--json` 利用者向けの固定コードがあります: [docs/findings.md](docs/findings.md)。
 
 `.git` なしで skill をコピーしてきましたか？ 一度 `skill-healthcheck adopt --repo <コピー元リポジトリ>` を実行すれば上流チェックが動きます。フォルダ名を変えた skill は内容で照合されます。
 

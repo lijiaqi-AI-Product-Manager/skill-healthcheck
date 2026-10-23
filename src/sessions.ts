@@ -4,8 +4,23 @@
 // cached; no conversation text leaves this module.
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { zstdDecompressSync } from 'node:zlib'
+import * as zlib from 'node:zlib'
 import type { Store } from './journal.js'
+
+/**
+ * Node added zstd to node:zlib in 22.15. Importing the name statically makes the whole CLI
+ * fail to load on 22.13/22.14 (the ESM linker checks named exports before main() runs), so
+ * read it off the namespace instead: older runtimes get a clear version message from the CLI
+ * rather than a SyntaxError, and this module still loads for `--version` / `--help`.
+ */
+const zstdDecompress: ((buffer: Buffer) => Buffer) | undefined = (
+  zlib as unknown as { zstdDecompressSync?: (buffer: Buffer) => Buffer }
+).zstdDecompressSync
+
+/** True when this Node can read dsh's compressed session logs. */
+export function zstdSupported(): boolean {
+  return typeof zstdDecompress === 'function'
+}
 
 export type SessionFormat = 'dsh' | 'claude-code' | 'codex'
 
@@ -110,20 +125,26 @@ const FILE_PATTERNS: Record<SessionFormat, { name: RegExp; maxDepth: number }> =
   codex: { name: /^rollout-.*\.jsonl$/, maxDepth: 4 },
 }
 
+/** Directories never worth descending into inside a sessions tree. */
+const SKIP_DIRS = new Set(['node_modules', '.git', '.cache'])
+
 function findSessionFiles(source: SessionSource): string[] {
   const { name: pattern, maxDepth } = FILE_PATTERNS[source.format]
   const out: string[] = []
   const walk = (current: string, depth: number) => {
-    let names: string[]
+    let entries
     try {
-      names = readdirSync(current)
+      entries = readdirSync(current, { withFileTypes: true })
     } catch {
       return
     }
-    for (const name of names) {
+    for (const entry of entries) {
+      const name = entry.name
       const full = join(current, name)
       if (pattern.test(name)) out.push(full)
-      else if (depth < maxDepth && !name.includes('.')) walk(full, depth + 1)
+      // Test the entry, not the name: `ws.v2` and `my.project` are normal workspace names,
+      // and skipping every dotted name silently dropped Claude Code history for those projects.
+      else if (depth < maxDepth && entry.isDirectory() && !SKIP_DIRS.has(name)) walk(full, depth + 1)
     }
   }
   walk(source.dir, 0)
@@ -134,7 +155,9 @@ export function summarizeSessionFile(file: string, format: SessionFormat = 'dsh'
   let text: string
   try {
     const buf = readFileSync(file)
-    text = file.endsWith('.zstd') ? zstdDecompressSync(buf).toString('utf8') : buf.toString('utf8')
+    if (!file.endsWith('.zstd')) text = buf.toString('utf8')
+    else if (zstdDecompress) text = zstdDecompress(buf).toString('utf8')
+    else return undefined // pre-22.15 Node: the CLI has already told the user to upgrade
   } catch {
     return undefined
   }
@@ -458,14 +481,46 @@ export interface UsageStats {
   quietSessions: number
 }
 
+/** Sessions that saw a skill in their catalog without calling it: the bar for "went quiet". */
+export const QUIET_SESSIONS = 3
+
+interface UsageIndex {
+  calls: Map<string, { count: number; last?: number }>
+  /** Per skill name: creation time of every session whose catalog listed it. */
+  shown: Map<string, number[]>
+}
+
+const usageIndexes = new WeakMap<SessionSummary[], UsageIndex>()
+
+/** One pass over all sessions; `usageStats` used to re-flatten every call for every skill. */
+function usageIndexOf(sessions: SessionSummary[]): UsageIndex {
+  const cached = usageIndexes.get(sessions)
+  if (cached) return cached
+  const index: UsageIndex = { calls: new Map(), shown: new Map() }
+  for (const session of sessions) {
+    for (const call of session.skillCalls) {
+      const entry = index.calls.get(call.name) ?? { count: 0 }
+      entry.count++
+      if (entry.last === undefined || call.t > entry.last) entry.last = call.t
+      index.calls.set(call.name, entry)
+    }
+    const listed = new Set(session.catalogs.flatMap((c) => c.entries.map((e) => e.name)))
+    for (const name of listed) {
+      const times = index.shown.get(name) ?? []
+      times.push(session.createdAt ?? 0)
+      index.shown.set(name, times)
+    }
+  }
+  usageIndexes.set(sessions, index)
+  return index
+}
+
 export function usageStats(sessions: SessionSummary[], name: string): UsageStats {
-  const calls = sessions.flatMap((s) => s.skillCalls).filter((c) => c.name === name)
-  const lastCall = calls.length ? Math.max(...calls.map((c) => c.t)) : undefined
-  const quietSessions =
-    lastCall === undefined
-      ? 0
-      : sessions.filter((s) => (s.createdAt ?? 0) > lastCall && s.catalogs.some((c) => c.entries.some((e) => e.name === name))).length
-  return { name, calls: calls.length, lastCall, quietSessions }
+  const index = usageIndexOf(sessions)
+  const call = index.calls.get(name)
+  const lastCall = call?.last
+  const quietSessions = lastCall === undefined ? 0 : (index.shown.get(name) ?? []).filter((createdAt) => createdAt > lastCall).length
+  return { name, calls: call?.count ?? 0, lastCall, quietSessions }
 }
 
 /** Per-day share of Chinese in assistant replies, and in user messages. */

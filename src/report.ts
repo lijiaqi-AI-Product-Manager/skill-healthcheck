@@ -4,6 +4,7 @@ import type { JournalEvent } from './journal.js'
 import { symptomTitle } from './lexicon.js'
 import { localDay } from './sessions.js'
 import type { Finding, Inventory } from './types.js'
+import { redactProvenance } from './upstream.js'
 import type { WhyResult } from './why.js'
 
 let useColor = process.env.FORCE_COLOR ? process.env.FORCE_COLOR !== '0' : Boolean(process.stdout.isTTY) && !process.env.NO_COLOR
@@ -140,8 +141,15 @@ function areaRank(f: Finding): number {
   return { upstream: 0, local: 1, usage: 2, plugin: 3 }[f.area]
 }
 
+/** Untrusted text (skill descriptions, git stderr) must not be able to drive the terminal. */
+export function safeText(s: string): string {
+  return s
+    .replace(/\x1b\[[0-9;?]*[ -/]*[@-~]/g, '') // ANSI escape sequences
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '') // C0 controls except \t
+}
+
 function itemLine(symbol: string, subject: string, message: string): string {
-  return `${INDENT}${symbol} ${padDisplay(subject, 16)} ${message}`
+  return `${INDENT}${symbol} ${padDisplay(safeText(subject), 16)} ${safeText(message)}`
 }
 
 function shortSubject(s: string): string {
@@ -160,14 +168,16 @@ export function renderDetails(r: CheckResult): string {
   const all = [...r.pluginFindings, ...r.verdicts.flatMap((v) => v.findings), ...r.orphanFindings].sort((a, b) => severityRank(a.severity) - severityRank(b.severity))
   for (const f of all) {
     if (f.severity === 'info') continue
-    out.push(`${c.bold(f.subject)}  [${f.severity}] ${f.message}`)
-    for (const d of f.detail ?? []) out.push(`    ${c.dim(d)}`)
+    out.push(`${c.bold(safeText(f.subject))}  [${f.severity}] ${safeText(f.message)}`)
+    for (const d of f.detail ?? []) out.push(`    ${c.dim(safeText(d))}`)
   }
   return out.join('\n')
 }
 
 export function checkJson(r: CheckResult) {
   return {
+    // Bumped only for a breaking change to this shape; finding codes are append-only.
+    schemaVersion: 1,
     platform: { id: r.platform.id, profile: r.platform.profile, host: r.platform.host },
     plugins: r.plugins,
     skills: r.verdicts.map((v) => ({
@@ -175,12 +185,13 @@ export function checkJson(r: CheckResult) {
       state: v.state,
       file: v.skill.file,
       source: v.skill.root.source,
-      provenance: v.provenance,
+      provenance: redactProvenance(v.provenance),
       upstream: v.upstream ? { state: v.upstream.state, ...('commit' in v.upstream ? { commit: v.upstream.commit } : {}) } : undefined,
       findings: v.findings,
       ...(v.explanation ? { explanation: v.explanation } : {}),
     })),
     other: r.orphanFindings,
+    pluginFindings: r.pluginFindings,
     recorded: r.newEvents.length,
     ...(r.explain ? { explain: r.explain } : {}),
   }
@@ -216,6 +227,7 @@ export function renderJournal(events: JournalEvent[]): string {
       const bits: string[] = []
       if (d?.nameChanged) bits.push(t('log.nameChanged', d.nameChanged.from, d.nameChanged.to))
       if (d?.descriptionChanged) bits.push(t('log.descChanged'))
+      if (d?.invocationChanged) bits.push(t('log.invocation'))
       if (d?.bodyDelta) bits.push(t('log.body', `${d.bodyDelta > 0 ? '+' : ''}${d.bodyDelta}`))
       if (d?.scriptsAdded) bits.push(t('log.scriptsAdded', d.scriptsAdded.join(', ')))
       if (d?.scriptsChanged) bits.push(t('log.scriptsChanged', d.scriptsChanged.join(', ')))
@@ -239,9 +251,9 @@ export function renderWhy(result: WhyResult, symptom?: string): string {
     return out.join('\n')
   }
   result.suspects.forEach((s, i) => {
-    out.push(`${i === 0 ? c.red(`${i + 1}.`) : `${i + 1}.`} ${c.bold(s.name.padEnd(20))} ${s.what}`)
-    for (const e of s.evidence.slice(0, 3)) out.push(`     ${c.dim(e)}`)
-    if (s.explanation) out.push(`     ${c.dim(t('explain.line', s.explanation))}`)
+    out.push(`${i === 0 ? c.red(`${i + 1}.`) : `${i + 1}.`} ${c.bold(safeText(s.name).padEnd(20))} ${safeText(s.what)}`)
+    for (const e of s.evidence.slice(0, 3)) out.push(`     ${c.dim(safeText(e))}`)
+    if (s.explanation) out.push(`     ${c.dim(safeText(t('explain.line', s.explanation)))}`)
   })
   if (result.explain) out.push(c.dim(result.explain.used ? t('explain.via', result.explain.provider, result.explain.model) : t('explain.none')))
   out.push(c.dim(t('why.footer')))

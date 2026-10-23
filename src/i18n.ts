@@ -36,6 +36,7 @@ const zh = {
 
   // upstream
   'up.offline': () => '离线模式，未检查',
+  'up.localMissing': (path: string) => `来源路径不存在：${path}（检查这个技能的 metadata.source）`,
   'up.suspicious': (url: string) => `拒绝使用可疑的来源地址：${url}`,
   'up.gh404': () => 'GitHub 返回 404（已删除或已转为私有）',
   'up.ghUnknown': (detail: string) => `${detail}；GitHub API 也无法确认`,
@@ -137,6 +138,7 @@ const zh = {
   'log.kind.upstream-changed': () => '上游变更',
   'log.nameChanged': (from: string, to: string) => `name ${from} → ${to}`,
   'log.descChanged': () => 'description 变了',
+  'log.invocation': () => '调用策略变了',
   'log.body': (delta: string) => `正文 ${delta} 字符`,
   'log.scriptsAdded': (files: string) => `新增脚本 ${files}`,
   'log.scriptsChanged': (files: string) => `脚本改动 ${files}`,
@@ -155,6 +157,7 @@ const zh = {
   'why.footer': () => '这是按时间和关键词排的嫌疑顺序，不是定论；可以先停用第 1 名验证。',
   'why.catalogChanged': (day: string) => `${day} 起模型看到的 description 变了`,
   'why.added': (hit: string) => `新增"${hit}"`,
+  'why.lost': (hit: string) => `不再有"${hit}"`,
   'why.removedWords': (words: string) => `删去 ${words}`,
   'why.addedWords': (words: string) => `新增 ${words}`,
   'why.estimated': () => '（按文件时间估计）',
@@ -196,7 +199,7 @@ const zh = {
   --cwd <目录>     以哪个项目目录为准（影响项目级技能）
   --force          覆盖已登记的来源（配合 adopt --repo）
 
-退出码：0 正常，1 有失效项，2 用法错误。
+退出码：0 正常，1 有失效项，2 用法错误，3 工具自身出错。
 它只读你的技能和配置，从不修改、从不自动更新。记录保存在 ~/.skill-healthcheck/。`,
   'cli.unknownPlatform': (p: string) => `未知平台：${p}`,
   'cli.unknownLang': (l: string) => `不支持的语言：${l}（可选 zh、en）`,
@@ -213,7 +216,10 @@ const zh = {
   'cli.byContent': (pct: number) => `内容相似 ${pct}%`,
   'cli.adoptSummary': (total: number, matched: number, missed: number) =>
     `仓库里有 ${total} 个技能；登记 ${matched} 个${missed ? `，${missed} 个本地技能在这个仓库里没找到` : ''}。`,
+  'cli.repoTruncated': () => '仓库里的 SKILL.md 超过 5000 个，只扫描了前 5000 个。',
   'cli.badDate': (s: string) => `看不懂的日期：${s}`,
+  'cli.nodeOld': (v: string) =>
+    `需要 Node.js 22.19 或更新版本（当前 ${v}）。dsh 的压缩会话日志用到 zstd，旧版本启动时会直接报错。\n升级 Node 后重试：nvm install 22 && nvm use 22`,
   'progress.upstream': (n: number, url: string) => `正在检查上游（第 ${n} 个仓库）：${url}`,
   'progress.plugins': () => '正在检查插件版本…',
 
@@ -248,8 +254,8 @@ const en: Catalog = {
   'local.conflict': (source, agent) => `same name as a skill in ${source}; ${agent} loads only one of them, keep one`,
   'local.active': (file) => `active: ${file}`,
   'local.loser': (file) => `shadowed: ${file}`,
-  'local.nested': (n) => `${n} skills nested too deep in this folder; only <root>/<name>/SKILL.md is discovered`,
-  'local.unscanned': (path, n) => `${path} is not scanned; its ${n} skills never load`,
+  'local.nested': (n) => `${n} ${n === 1 ? 'skill' : 'skills'} nested too deep in this folder; only <root>/<name>/SKILL.md is discovered`,
+  'local.unscanned': (path, n) => `${path} is not scanned; ${n === 1 ? 'its one skill never loads' : `its ${n} skills never load`}`,
   'local.truncated': (max) => `description is over ${max} characters and gets truncated in the catalog; the model never sees the trigger words at the end`,
   'local.shownTo': (tail) => `shown up to: …${tail}`,
   'local.manualOnly': (name) => `disable-model-invocation: true, only usable as /${name}`,
@@ -259,6 +265,7 @@ const en: Catalog = {
   'usage.descChangedOn': (day) => `the description the model saw changed on ${day}`,
 
   'up.offline': () => 'offline mode, not checked',
+  'up.localMissing': (path) => `the source path doesn't exist: ${path} (check this skill's metadata.source)`,
   'up.suspicious': (url) => `refusing a suspicious source address: ${url}`,
   'up.gh404': () => 'GitHub returned 404 (deleted or made private)',
   'up.ghUnknown': (detail) => `${detail}; the GitHub API couldn't confirm either`,
@@ -340,7 +347,7 @@ const en: Catalog = {
   'ls.header': (label, root) => `${label} · project root ${root}`,
   'ls.manual': () => '  (manual only)',
   'ls.shadowed': (source, by) => `${source}, shadowed by ${by}`,
-  'ls.nested': (n) => `${n} nested skills, never discovered`,
+  'ls.nested': (n) => `${n} nested ${n === 1 ? 'skill' : 'skills'}, never discovered`,
   'ls.unscanned': (_path, n) => `not scanned (${n})`,
   'ls.runtime': (n) => `${n} more come from plugins or are built into the host, not these folders (from the catalog in session logs):`,
 
@@ -355,6 +362,7 @@ const en: Catalog = {
   'log.kind.upstream-changed': () => 'upstream',
   'log.nameChanged': (from, to) => `name ${from} → ${to}`,
   'log.descChanged': () => 'description changed',
+  'log.invocation': () => 'invocation policy changed',
   'log.body': (delta) => `body ${delta} characters`,
   'log.scriptsAdded': (files) => `new scripts ${files}`,
   'log.scriptsChanged': (files) => `scripts changed ${files}`,
@@ -372,6 +380,7 @@ const en: Catalog = {
   'why.footer': () => 'Ranked by time and keywords, not a verdict. Disable #1 first to confirm.',
   'why.catalogChanged': (day) => `the description the model sees changed on ${day}`,
   'why.added': (hit) => `adds "${hit}"`,
+  'why.lost': (hit) => `dropped "${hit}"`,
   'why.removedWords': (words) => `removed ${words}`,
   'why.addedWords': (words) => `added ${words}`,
   'why.estimated': () => ' (estimated from file time)',
@@ -413,7 +422,7 @@ Options
   --cwd <dir>      project directory to use (affects project-level skills)
   --force          overwrite already registered sources (with adopt --repo)
 
-Exit codes: 0 healthy, 1 something is broken, 2 usage error.
+Exit codes: 0 healthy, 1 something is broken, 2 usage error, 3 the tool itself failed.
 Read-only: it never modifies or auto-updates anything. The journal lives in ~/.skill-healthcheck/.`,
   'cli.unknownPlatform': (p) => `unknown platform: ${p}`,
   'cli.unknownLang': (l) => `unsupported language: ${l} (use zh or en)`,
@@ -430,7 +439,10 @@ Read-only: it never modifies or auto-updates anything. The journal lives in ~/.s
   'cli.byContent': (pct) => `${pct}% similar content`,
   'cli.adoptSummary': (total, matched, missed) =>
     `${total} skills in the repo; registered ${matched}${missed ? `, ${missed} local ${missed === 1 ? 'skill' : 'skills'} not found in it` : ''}.`,
+  'cli.repoTruncated': () => 'the repository has more than 5000 SKILL.md files; only the first 5000 were scanned.',
   'cli.badDate': (s) => `can't parse date: ${s}`,
+  'cli.nodeOld': (v) =>
+    `skill-healthcheck needs Node.js 22.19 or newer (you have ${v}). dsh's compressed session logs use zstd, which older Node can't load.\nUpgrade Node and try again: nvm install 22 && nvm use 22`,
   'progress.upstream': (n, url) => `checking upstream (repo ${n}): ${url}`,
   'progress.plugins': () => 'checking plugin versions…',
 

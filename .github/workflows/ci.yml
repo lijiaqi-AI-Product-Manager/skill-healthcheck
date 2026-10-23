@@ -27,3 +27,39 @@ jobs:
         run: |
           npm pack --dry-run
           npm pack --dry-run ./packages/dsh-skill-healthcheck
+
+  # The matrix above installs the newest Node 22, so it can never catch "the declared
+  # minimum does not actually work". Pin the floor and test it for real.
+  minimum-node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.19.0'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+
+  # Older Node must fail with one sentence, not an ESM SyntaxError from a missing zstd export.
+  old-node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.13.1'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Prints a version and a clear upgrade message
+        run: |
+          node dist/cli.js --version
+          set +e
+          out=$(node dist/cli.js check --no-sessions 2>&1)
+          code=$?
+          set -e
+          echo "$out"
+          test "$code" = "2"
+          echo "$out" | grep -q "22.19"

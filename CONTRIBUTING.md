@@ -53,7 +53,7 @@ The demo writes only inside `demo/.sandbox` and sets `SKILL_HEALTHCHECK_USER_HOM
 - **Keep output deterministic.** No network in the default path, no LLM calls outside `--explain`, no timestamps in anything that gets compared in tests.
 - **Don't break `--json`.** Finding codes in `docs/findings.md` are a public contract; add new ones rather than renaming existing ones.
 - **Both languages.** User-facing text goes through `src/i18n.ts` with a Chinese and an English string. `--lang` and `SKILL_HEALTHCHECK_LANG` must both keep working.
-- **Exit codes stay honest.** `0` healthy, `1` something broken, `2` usage error. If a new finding can break a user's setup, it belongs in the `1` bucket.
+- **Exit codes stay honest.** `0` healthy, `1` something locally broken, `2` usage error, `3` the tool itself failed. Upstream findings do not set `1` on their own: a `critical` description change is advisory because the tool cannot know whether it still triggers for you. Keep the `severity` honest and let the caller decide.
 
 ## Translations
 

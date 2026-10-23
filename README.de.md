@@ -95,7 +95,7 @@ In Festlandchina installiert der npmmirror-Spiegel meist schneller: `npm install
 
 Häufige Optionen: `--all` alles aufklappen, `--json` maschinenlesbar, `--offline` ohne Netzwerk, `--no-sessions` Sitzungsprotokolle ignorieren, `--lang zh|en` Ausgabesprache (Standard: System-Locale; auch `SKILL_HEALTHCHECK_LANG`), `--explain` ein Satz Klartext pro Upstream-Änderung (siehe unten), `--platform dsh|generic`, `--profile <Name>`, `--cwd <Projektverzeichnis>`.
 
-Exit-Codes: `0` alles in Ordnung (verfügbare Updates zählen als in Ordnung), `1` etwas ist kaputt (inklusive verworfener, verdeckter oder zu tief verschachtelter Skills und kaputter Plugins), `2` Nutzungsfehler. Passt direkt in die CI. Jeder Befund hat einen stabilen Code für `--json`-Konsumenten: [docs/findings.md](docs/findings.md).
+Exit-Codes: `0` alles in Ordnung (verfügbare Updates zählen als in Ordnung), `1` etwas ist kaputt (inklusive verworfener, verdeckter oder zu tief verschachtelter Skills und kaputter Plugins), `2` Nutzungsfehler, `3` interner Fehler. Passt direkt in die CI. Jeder Befund hat einen stabilen Code für `--json`-Konsumenten: [docs/findings.md](docs/findings.md).
 
 Skills ohne ihr `.git` kopiert? Führe einmal `skill-healthcheck adopt --repo <das Repository, aus dem sie kamen>` aus, damit die Upstream-Prüfungen funktionieren. Skills mit umbenanntem Ordner werden über den Inhalt zugeordnet.
 

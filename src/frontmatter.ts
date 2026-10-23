@@ -36,7 +36,9 @@ const LEGACY_KEYS: Array<[string, string]> = [
   ['userInvocable', 'user-invocable'],
 ]
 
-export function parseSkillText(raw: string): ParseResult {
+export function parseSkillText(input: string): ParseResult {
+  // A BOM is what Notepad and PowerShell's Out-File write; it is not part of the document.
+  const raw = input.replace(/^\ufeff/, '')
   let split: { data: Record<string, unknown>; body: string } | undefined
   try {
     split = splitFrontmatter(raw)
@@ -60,7 +62,7 @@ export function parseSkillText(raw: string): ParseResult {
   } catch (error) {
     return { ok: false, code: 'invalid-invocation', reason: firstLine(error), rawName }
   }
-  const skill: ParsedSkill = { name, description, invocation, body: body.trim() }
+  const skill: ParsedSkill = { name, description, invocation, body: body.replace(/\r\n/g, '\n').trim() }
   const whenToUse = stringField(data, 'whenToUse')
   if (whenToUse !== undefined) skill.whenToUse = whenToUse
   const metadata = data.metadata
@@ -132,5 +134,8 @@ function firstLine(error: unknown): string {
 /** dsh-tool-skill's catalog rendering: whitespace collapsed, cut at maxLength with "...". */
 export function catalogDescription(value: string, maxLength: number): string {
   const normalized = value.replaceAll(/\s+/g, ' ').trim()
-  return normalized.length <= maxLength ? normalized : `${normalized.slice(0, maxLength - 3)}...`
+  if (normalized.length <= maxLength) return normalized
+  const cut = normalized.slice(0, maxLength - 3)
+  // Never leave half a surrogate pair behind: the catalog would render a replacement glyph.
+  return `${/[\uD800-\uDBFF]$/.test(cut) ? cut.slice(0, -1) : cut}...`
 }

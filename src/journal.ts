@@ -1,4 +1,4 @@
-﻿// The recorder. Every run snapshots what is installed, diffs it against the previous
+// The recorder. Every run snapshots what is installed, diffs it against the previous
 // snapshot and appends what changed to an append-only journal. Full SKILL.md texts go
 // into a content-addressed blob store so later diffs (and `why`) can see old versions.
 import { createHash } from 'node:crypto'
@@ -81,7 +81,7 @@ export class Store {
   }
 
   ensure() {
-    mkdirSync(join(this.dir, 'blobs'), { recursive: true })
+    mkdirSync(join(this.dir, 'blobs'), { recursive: true, mode: 0o700 })
   }
 
   private partitionFile(key: string) {
@@ -110,7 +110,7 @@ export class Store {
   append(events: JournalEvent[]) {
     if (events.length === 0) return
     this.ensure()
-    appendFileSync(this.journalFile, events.map((e) => JSON.stringify(e)).join('\n') + '\n')
+    appendFileSync(this.journalFile, events.map((e) => JSON.stringify(e)).join('\n') + '\n', { mode: 0o600 })
   }
 
   readJournal(): JournalEvent[] {
@@ -156,9 +156,10 @@ export class Store {
  * over the target so a reader never sees half a JSON document.
  */
 function writeAtomic(file: string, content: string) {
-  mkdirSync(dirname(file), { recursive: true })
+  mkdirSync(dirname(file), { recursive: true, mode: 0o700 })
   const tmp = `${file}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`
-  writeFileSync(tmp, content)
+  // The journal holds full skill texts and adopted URLs; keep it private on multi-user hosts.
+  writeFileSync(tmp, content, { mode: 0o600 })
   try {
     renameSync(tmp, file)
   } catch (error) {

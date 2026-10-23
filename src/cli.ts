@@ -9,7 +9,7 @@ import { isLang, setLang, t } from './i18n.js'
 import type { JournalEvent } from './journal.js'
 import { c, checkJson, renderCheck, renderDetails, renderInventory, renderJournal, renderWhy } from './report.js'
 import { catalogTimeline, loadSessions } from './sessions.js'
-import { isSafeGitUrl, matchRepoSkills, parseSourceSpec, resolveProvenance, SOURCES_FILE, UpstreamChecker, type SourcesFile } from './upstream.js'
+import { isSafeGitUrl, matchRepoSkills, parseSourceSpec, redactUrl, resolveProvenance, SOURCES_FILE, UpstreamChecker, type SourcesFile } from './upstream.js'
 import { explainWhy, why } from './why.js'
 
 async function main(argv: string[]): Promise<number> {
@@ -46,6 +46,12 @@ async function main(argv: string[]): Promise<number> {
   if (values.version) {
     console.log(readVersion())
     return 0
+  }
+  // npm only warns about engines. Say it in one line instead of an ESM SyntaxError from a
+  // runtime that lacks zstd (Node < 22.15) or other APIs the checks rely on.
+  if (!nodeSupported()) {
+    console.error(t('cli.nodeOld', process.versions.node))
+    return 2
   }
   const platform = values.platform
   if (platform !== undefined && platform !== 'dsh' && platform !== 'generic') throw new UsageError(t('cli.unknownPlatform', platform))
@@ -132,7 +138,7 @@ async function main(argv: string[]): Promise<number> {
       const sources = store.readJsonFile<SourcesFile>(SOURCES_FILE) ?? {}
       sources[name] = { ...parsed, adoptedAt: nowMs() }
       store.writeJsonFile(SOURCES_FILE, sources)
-      console.log(t('cli.adopted', name, `${parsed.url}${parsed.subpath ? `#${parsed.subpath}` : ''}${parsed.ref ? `@${parsed.ref}` : ''}`))
+      console.log(t('cli.adopted', name, `${redactUrl(parsed.url)}${parsed.subpath ? `#${parsed.subpath}` : ''}${parsed.ref ? `@${parsed.ref}` : ''}`))
       return 0
     }
     case 'record': {
@@ -175,6 +181,7 @@ async function adoptRepo(spec: string, options: CheckOptions, force: boolean): P
   }
   if (result.matches.length) store.writeJsonFile(SOURCES_FILE, sources)
   console.log(c.dim(t('cli.adoptSummary', result.repoSkills, result.matches.length, candidates.length - result.matches.length)))
+  if (result.truncated) console.log(c.dim(t('cli.repoTruncated')))
   return 0
 }
 
@@ -190,6 +197,14 @@ function parseDate(s: string): number {
   const time = Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(s) ? `${s}T00:00:00` : s)
   if (Number.isNaN(time)) throw new UsageError(t('cli.badDate', s))
   return time
+}
+
+/** Minimum supported runtime; keep in sync with package.json "engines". */
+const MIN_NODE = [22, 19] as const
+
+function nodeSupported(): boolean {
+  const [major = 0, minor = 0] = process.versions.node.split('.').map((n) => Number.parseInt(n, 10))
+  return major > MIN_NODE[0] || (major === MIN_NODE[0] && minor >= MIN_NODE[1])
 }
 
 function readVersion(): string {
@@ -208,7 +223,8 @@ main(process.argv.slice(2)).then(
       console.error(error.message)
       process.exit(2)
     }
+    // Not a usage problem: the tool itself failed. A separate code lets CI tell the two apart.
     console.error(error)
-    process.exit(2)
+    process.exit(3)
   },
 )

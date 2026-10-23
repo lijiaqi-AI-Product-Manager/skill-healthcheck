@@ -93,7 +93,7 @@ git clone https://github.com/lijiaqimun-coder/skill-healthcheck && cd skill-heal
 
 通用选项：`--all` 展开全部、`--json` 机器可读、`--offline` 不联网、`--no-sessions` 不读会话日志、`--lang zh|en` 输出语言（默认跟随系统，也可以用环境变量 `SKILL_HEALTHCHECK_LANG`）、`--explain` 给每个上游改动加一句人话解读（见下文）、`--platform dsh|generic`、`--profile <名字>`、`--cwd <项目目录>`。
 
-退出码：`0` 一切正常（有更新也算正常），`1` 有失效项（包括被丢弃、被遮蔽、嵌套太深的技能和失效插件），`2` 用法错误。可以直接放进 CI。每种发现都有固定的代码，方便用 `--json` 做二次开发：[docs/findings.md](docs/findings.md)。
+退出码：`0` 一切正常（有更新也算正常），`1` 有失效项（包括被丢弃、被遮蔽、嵌套太深的技能和失效插件），`2` 用法错误，`3` 工具自身出错。可以直接放进 CI。每种发现都有固定的代码，方便用 `--json` 做二次开发：[docs/findings.md](docs/findings.md)。
 
 技能是复制过来的、没有 `.git`？先跑一次 `skill-healthcheck adopt --repo <它来自的仓库>`，上游检查才能生效。目录被改名的技能也能按内容找回来。
 

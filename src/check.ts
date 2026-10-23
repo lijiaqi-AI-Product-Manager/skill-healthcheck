@@ -8,7 +8,7 @@ import { detectPlatform, type PlatformOptions } from './platforms.js'
 import { checkPlugins, pluginFindings, type PluginReport } from './plugins.js'
 import { catalogTimeline, loadSessions, type CatalogTimeline, type SessionSummary } from './sessions.js'
 import type { Finding, InstalledSkill, Inventory, PlatformInfo, Severity } from './types.js'
-import { resolveProvenance, SOURCES_FILE, UpstreamChecker, type Provenance, type SourcesFile, type UpstreamResult } from './upstream.js'
+import { resolveProvenance, SOURCES_FILE, UpstreamChecker, type Provenance, type ProvenanceCache, type SourcesFile, type UpstreamResult } from './upstream.js'
 
 export interface SkillVerdict {
   skill: InstalledSkill
@@ -66,6 +66,19 @@ export async function runCheck(options: CheckOptions = {}): Promise<CheckResult>
   const local = localFindings(inventory)
   const usage = usageFindings(inventory, sessions, timeline)
   const sources = store.readJsonFile<SourcesFile>(SOURCES_FILE) ?? {}
+  // Group once instead of scanning every finding for every skill (O(skills x findings)).
+  const grouped = new Map<string, Finding[]>()
+  for (const finding of [...local, ...usage]) {
+    // `shadowed` and `dropped` describe other entries that share a name; they belong to
+    // orphanFindings, never to an active skill's own verdict.
+    if (finding.code === 'shadowed' || finding.code === 'dropped') continue
+    const list = grouped.get(finding.subject)
+    if (list) list.push(finding)
+    else grouped.set(finding.subject, [finding])
+  }
+  // One git spawn per checkout, not per skill: every skill in the same repo shares a root.
+  const repoCache: ProvenanceCache = new Map()
+  const provenanceOf = (skill: InstalledSkill) => resolveProvenance(skill, platform, sources, repoCache)
   const fetched = new Set<string>()
   const checker = new UpstreamChecker(store, {
     offline: options.offline,
@@ -76,8 +89,8 @@ export async function runCheck(options: CheckOptions = {}): Promise<CheckResult>
   })
 
   const verdicts = await mapLimit(inventory.active, 4, async (skill): Promise<SkillVerdict> => {
-    const provenance = await resolveProvenance(skill, platform, sources)
-    const findings = [...local, ...usage].filter((f) => f.subject === skill.skill.name && f.code !== 'shadowed' && f.code !== 'dropped')
+    const provenance = await provenanceOf(skill)
+    const findings = [...(grouped.get(skill.skill.name) ?? [])]
     let upstream: UpstreamResult | undefined
     if (provenance.kind === 'git') {
       upstream = await checker.check(skill, provenance)
