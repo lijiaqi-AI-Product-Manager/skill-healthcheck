@@ -1,0 +1,1734 @@
+{
+  "version": 2,
+  "sources": "symptoms and platform_tokens drafted by DSH (research/lexicon.json), merged and pruned for false positives",
+  "symptoms": [
+    {
+      "id": "language",
+      "title_zh": "回复语言变了（不用中文 / 中英混杂）",
+      "user_phrases": [
+        "不用中文",
+        "不说中文",
+        "不讲中文",
+        "全是英文",
+        "变成英文",
+        "用英文回答",
+        "中英混",
+        "英文回复",
+        "stopped replying in Chinese",
+        "answers in english",
+        "replies in english",
+        "为什么不用中文回答我了",
+        "回复变成英文了",
+        "中英混杂看着很乱",
+        "中文回复没了",
+        "全是英文看不懂",
+        "answers in English now",
+        "mixed Chinese and English",
+        "why is it writing in English",
+        "switched to English without asking"
+      ],
+      "skill_signals": {
+        "phrases": [
+          "respond in English",
+          "reply in English",
+          "write in english",
+          "use english",
+          "english terminology",
+          "english only",
+          "professional tone",
+          "默认使用英文",
+          "使用英文",
+          "英文术语",
+          "用英文",
+          "answer in English",
+          "respond only in English",
+          "用英文回答"
+        ],
+        "regex": [
+          "\\b(always|only)\\s+(respond|reply|write|answer)\\s+in\\s+english\\b",
+          "\\boutput\\s+language\\s*[:=]\\s*english\\b",
+          "\\b(always|only|must|should)\\s+(respond|reply|answer|write|speak)\\s+in\\s+English\\b",
+          "\\bEnglish\\s+(responses?|replies|answers)\\s+only\\b",
+          "\\bin\\s+English\\s+(only|at\\s+all\\s+times|by\\s+default)\\b",
+          "(默认|一律|始终|必须).{0,4}(使用|用|说|输出)(英文|英语)"
+        ]
+      },
+      "explain_zh": "技能里要求「用英文回答 / 使用英文术语」或把语言写死的规则，会压过用户的语言偏好。"
+    },
+    {
+      "id": "tone",
+      "title_zh": "语气与正式程度变了（太官方 / 太啰嗦 / 太随意）",
+      "user_phrases": [
+        "太官方",
+        "太正式",
+        "语气变了",
+        "像客服",
+        "太随意",
+        "太客气",
+        "too formal",
+        "tone changed",
+        "sounds corporate",
+        "说话太官方了",
+        "语气太正式像客服",
+        "怎么突然这么客气",
+        "太啰嗦了",
+        "废话太多没重点",
+        "too formal all of a sudden",
+        "too verbose now",
+        "became too casual",
+        "sounds like a corporate bot",
+        "lost its personality"
+      ],
+      "skill_signals": {
+        "phrases": [
+          "professional tone",
+          "formal tone",
+          "business tone",
+          "casual tone",
+          "friendly tone",
+          "concise and professional",
+          "正式语气",
+          "专业语气",
+          "口语化",
+          "voice and tone",
+          "tone of voice",
+          "brand voice",
+          "avoid jargon",
+          "keep it concise",
+          "保持专业语气",
+          "不要寒暄",
+          "语气要正式"
+        ],
+        "regex": [
+          "\\b(use|adopt|maintain)\\s+an?\\s+\\w+\\s+tone\\b",
+          "\\b(use|adopt|maintain|keep)\\s+a\\s+(professional|formal|friendly|conversational|warm|casual)\\s+(tone|voice)\\b",
+          "\\bavoid\\s+(casual|informal|slang|pleasantries)\\b",
+          "\\b(professional|formal)\\s+(and|but)\\s+(concise|friendly|warm)\\b",
+          "(保持|使用|采用).{0,4}(专业|正式|亲切|冷淡).{0,3}(语气|口吻)"
+        ]
+      },
+      "explain_zh": "给技能加了「保持专业/正式语气」「不要寒暄」这类风格要求，会让回答突然变得官方或生硬。"
+    },
+    {
+      "id": "length",
+      "title_zh": "回答长度变了（变长 / 变短）",
+      "user_phrases": [
+        "太啰嗦",
+        "变长了",
+        "废话多",
+        "太简短",
+        "只回一句",
+        "too verbose",
+        "too long",
+        "too short",
+        "回答变得特别长",
+        "为什么现在只回一句",
+        "太简略了看不懂",
+        "每个回答都几百字",
+        "话明显变少了",
+        "answers are way too long now",
+        "too short to be useful",
+        "walls of text",
+        "it barely explains anything",
+        "used to be more detailed"
+      ],
+      "skill_signals": {
+        "phrases": [
+          "be concise",
+          "keep it short",
+          "be thorough",
+          "explain in detail",
+          "step by step",
+          "详细解释",
+          "尽量简短",
+          "逐步说明",
+          "one paragraph",
+          "single paragraph",
+          "minimal explanation",
+          "回答要简洁",
+          "不超过"
+        ],
+        "regex": [
+          "\\b(at most|no more than|under)\\s+\\d+\\s+(words|sentences|lines)\\b",
+          "\\b(keep|make)\\s+(it|responses?|answers?)\\s+(short|brief|concise)\\b",
+          "\\b(under|fewer\\s+than|less\\s+than)\\s+\\d+\\s+(words|lines|sentences)\\b",
+          "\\bavoid\\s+(long|lengthy|verbose)\\s+(explanations?|answers?|prose)\\b",
+          "(回答|回复|输出).{0,6}(不超过|控制在|限制在).{0,6}(字|词|行)"
+        ]
+      },
+      "explain_zh": "「简短回答 / 不超过 N 字 / 只给一段」这类长度约束，会直接改变输出的详略程度。"
+    },
+    {
+      "id": "format",
+      "title_zh": "输出格式变了（表格 / emoji / markdown 标题 / 不用代码块）",
+      "user_phrases": [
+        "全是表格",
+        "突然用表格",
+        "emoji",
+        "表情",
+        "标题太多",
+        "不用代码块",
+        "格式变了",
+        "markdown",
+        "为什么都用表格了",
+        "突然开始用 emoji",
+        "满屏 markdown 标题",
+        "不要用列表",
+        "代码没有代码块了",
+        "why is everything a table now",
+        "stop using emojis",
+        "no more markdown headings",
+        "I want plain text",
+        "code blocks disappeared"
+      ],
+      "skill_signals": {
+        "phrases": [
+          "use a table",
+          "use tables",
+          "markdown table",
+          "use emoji",
+          "use headings",
+          "bullet points",
+          "使用表格",
+          "使用 emoji",
+          "分点列出",
+          "use bullet points",
+          "用表格",
+          "不要用 emoji",
+          "纯文本"
+        ],
+        "regex": [
+          "\\balways\\s+(use|format|output)\\b.{0,40}\\b(table|markdown|json|emoji|bullet)",
+          "\\b(use|avoid|no|without)\\s+(a\\s+)?(markdown\\s+)?tables?\\b",
+          "\\bmarkdown\\s+tables?\\b",
+          "\\b(use|avoid|no|without)\\s+emoji",
+          "\\b(use|avoid)\\s+(bullet\\s+points|headings?|headers?|markdown)\\b",
+          "(用|使用|不要用|避免|改成).{0,3}(表格|emoji|小标题|列表|纯文本)"
+        ]
+      },
+      "explain_zh": "技能里写死「用表格 / 加 emoji / 用小标题 / 只输出纯文本」，会整体换掉输出的排版习惯。"
+    },
+    {
+      "id": "asks-too-many-questions",
+      "title_zh": "问太多问题、不敢动手",
+      "user_phrases": [
+        "为什么一直问我问题",
+        "总在确认不肯动手",
+        "问一堆问题才开始",
+        "它只会反问我",
+        "老是等我拍板",
+        "keeps asking me questions",
+        "won't start without confirmation",
+        "too many clarifying questions",
+        "hesitates instead of doing",
+        "always waits for my approval"
+      ],
+      "skill_signals": {
+        "phrases": [
+          "ask the user",
+          "ask clarifying questions",
+          "confirm with the user",
+          "wait for approval",
+          "get approval",
+          "user approval",
+          "do not assume",
+          "先确认",
+          "向用户确认",
+          "询问用户"
+        ],
+        "regex": [
+          "\\bask\\s+(the\\s+user\\s+)?(clarifying\\s+|follow-?up\\s+)?questions?\\b",
+          "\\bconfirm\\s+(with\\s+the\\s+user\\s+)?before\\s+(proceeding|starting|making|writing|running)\\b",
+          "\\bwait\\s+for\\s+(the\\s+)?(user\\s+)?(approval|confirmation|input)\\b",
+          "(先|并|要|需).{0,4}(向)?用户(确认|询问|提问)"
+        ]
+      },
+      "explain_zh": "新增「先向用户确认 / 等用户批准」的规则，会让 agent 从直接动手变成反复追问。"
+    },
+    {
+      "id": "acts-without-confirmation",
+      "title_zh": "不经确认就执行操作",
+      "user_phrases": [
+        "为什么没问我直接改了",
+        "它自己就把文件删了",
+        "不确认就动手",
+        "什么时候开始自作主张的",
+        "直接就执行了命令",
+        "changed files without asking me",
+        "ran commands without confirmation",
+        "never asked permission",
+        "it just went ahead",
+        "why did it act on its own"
+      ],
+      "skill_signals": {
+        "phrases": [
+          "without asking",
+          "without confirmation",
+          "without permission",
+          "no need to confirm",
+          "act autonomously",
+          "just do it",
+          "直接执行",
+          "无需确认",
+          "不用问",
+          "自动执行"
+        ],
+        "regex": [
+          "\\b(without|no)\\s+(asking|confirmation|approval|permission)\\b",
+          "\\b(do\\s+not|don't|never)\\s+ask\\s+(for\\s+)?(permission|confirmation|approval)\\b",
+          "\\b(act|proceed)\\s+(autonomously|independently|without\\s+asking)\\b",
+          "(无需|不用|不必).{0,3}(确认|询问|征求)|直接(执行|动手|修改)"
+        ]
+      },
+      "explain_zh": "「无需确认、直接执行、自主推进」这类规则，会让 agent 跳过原本会先问一句的步骤。"
+    },
+    {
+      "id": "skips-tests",
+      "title_zh": "不跑测试、跳过验证",
+      "user_phrases": [
+        "为什么没跑测试就说完成了",
+        "它跳过了验证步骤",
+        "改完根本不验证",
+        "测试没过也提交",
+        "现在都不跑 CI 了",
+        "stopped running tests",
+        "skips verification now",
+        "claimed done without testing",
+        "no tests were run",
+        "ignores failing tests"
+      ],
+      "skill_signals": {
+        "phrases": [
+          "skip tests",
+          "skip the tests",
+          "跳过测试",
+          "不用跑测试",
+          "省略验证",
+          "不跑测试"
+        ],
+        "regex": [
+          "\\bskip\\s+(the\\s+)?(unit\\s+|e2e\\s+|integration\\s+)?tests?\\b",
+          "\\b(no\\s+need|not\\s+necessary)\\s+to\\s+(run|execute)\\s+(the\\s+)?tests?\\b",
+          "\\bwithout\\s+(running|executing)\\s+(the\\s+)?tests?\\b",
+          "\\b(omit|bypass)\\s+(the\\s+)?(verification|checks?)\\b",
+          "(跳过|省略|不用跑|不必跑).{0,3}(测试|验证|检查)"
+        ]
+      },
+      "explain_zh": "正文里出现「跳过测试 / 不必验证」的口径，会让 agent 交付未经验证的结果却仍说完成。"
+    },
+    {
+      "id": "file-sprawl",
+      "title_zh": "乱建文件、生成多余文档",
+      "user_phrases": [
+        "为什么给我生成一堆 md 文件",
+        "它自己新建了报告",
+        "项目里冒出很多多余文件",
+        "为什么顺手写了个 README",
+        "每次都产出一份总结",
+        "keeps creating new files",
+        "wrote a report I never asked for",
+        "too many generated docs",
+        "why did it add a summary file",
+        "spams my repo with markdown"
+      ],
+      "skill_signals": {
+        "phrases": [
+          "save to a new file",
+          "save to file",
+          "save documentation",
+          "write diff file",
+          "write design doc",
+          "write the file",
+          "save its markdown notes",
+          "生成报告",
+          "创建文档",
+          "保存到文件"
+        ],
+        "regex": [
+          "\\b(create|write|generate|produce|save)\\s+(a\\s+|the\\s+|its\\s+|new\\s+)?[\\w-]*\\s*(report|summary|documentation|readme|changelog|notes?|file|doc)\\b",
+          "\\bsave\\s+(it\\s+)?(to|in|into)\\s+(a\\s+)?(new\\s+)?file\\b",
+          "\\b(always|also)\\s+(write|create)\\s+(a\\s+)?(summary|report|doc|file)\\b",
+          "(生成|写|创建|产出|保存).{0,4}(报告|总结|文档|说明|清单|文件)"
+        ]
+      },
+      "explain_zh": "「顺手写一份报告/总结/README」这类要求，会让每次任务都在仓库里多出文件。"
+    },
+    {
+      "id": "git-behavior",
+      "title_zh": "git 行为变了（自动提交 / 改 commit 信息格式）",
+      "user_phrases": [
+        "为什么它自己 git commit 了",
+        "commit 信息格式变了",
+        "它自动提交了改动",
+        "为什么每一步都 commit",
+        "commit message 变成中文了",
+        "committed without asking me",
+        "commit messages look different now",
+        "auto-commits everything",
+        "why did it create a commit",
+        "it amends my commits"
+      ],
+      "skill_signals": {
+        "phrases": [
+          "commit message",
+          "conventional commit",
+          "create a commit",
+          "amend the commit",
+          "自动提交",
+          "提交信息",
+          "commit 格式"
+        ],
+        "regex": [
+          "\\bgit\\s+commit\\b",
+          "\\bcommit\\s+(messages?|format|style)\\b",
+          "\\b(conventional\\s+commits?|commit\\s+convention)\\b",
+          "\\bgit\\s+(push|amend|rebase|squash)\\b",
+          "自动提交|提交信息(格式)?|提交(一次|一个)commit"
+        ]
+      },
+      "explain_zh": "技能里写了 git 提交动作或 commit message 规范，agent 就会开始自行提交、或把提交信息改成统一格式。"
+    },
+    {
+      "id": "code-style",
+      "title_zh": "代码风格变了（加注释 / 改命名 / 改缩进）",
+      "user_phrases": [
+        "为什么给每行都加注释",
+        "变量命名风格变了",
+        "缩进从 2 空格变 4 空格",
+        "它把整个文件格式化了",
+        "注释太多很吵",
+        "it added comments everywhere",
+        "changed my naming convention",
+        "reformatted the whole file",
+        "why tabs instead of spaces",
+        "renamed all my variables"
+      ],
+      "skill_signals": {
+        "phrases": [
+          "add comments",
+          "添加注释",
+          "命名规范",
+          "缩进"
+        ],
+        "regex": [
+          "\\badd\\s+(inline\\s+|doc\\s+)?comments?\\b",
+          "\\b\\d+[- ]space\\s+indentation\\b",
+          "\\b(camelCase|snake_case|kebab-case|PascalCase)\\b",
+          "\\b(prettier|eslint|gofmt|black|rustfmt)\\b",
+          "(添加|写|补).{0,4}注释|命名(规范|风格|约定)"
+        ]
+      },
+      "explain_zh": "「加注释 / 统一命名 / 用某个格式化器」这类代码规范，会覆盖项目原有的风格。"
+    },
+    {
+      "id": "refusal",
+      "title_zh": "变得拒绝或过度谨慎",
+      "user_phrases": [
+        "它现在什么都不肯做",
+        "一直说风险让我自己处理",
+        "动不动就拒绝",
+        "太谨慎了不敢改",
+        "老是提醒我危险",
+        "refuses to do anything now",
+        "too cautious to make changes",
+        "keeps warning me about risks",
+        "declines instead of helping",
+        "asks for explicit permission every time"
+      ],
+      "skill_signals": {
+        "phrases": [
+          "refuse to",
+          "destructive operations",
+          "explicit permission",
+          "拒绝执行",
+          "高风险操作",
+          "危险操作"
+        ],
+        "regex": [
+          "\\b(refuse|decline)\\s+to\\b",
+          "\\b(destructive|irreversible|dangerous)\\s+(operations?|commands?|actions?)\\b",
+          "\\bexplicit\\s+(permission|approval)\\b",
+          "\\b(do\\s+not|never)\\s+proceed\\s+(if|without)\\b",
+          "拒绝(执行|操作)|高风险|危险(操作|命令)"
+        ]
+      },
+      "explain_zh": "「高危操作先警告 / 必须显式授权 / 否则拒绝」的措辞，会让 agent 变得畏手畏脚甚至直接拒绝。"
+    },
+    {
+      "id": "skill-not-triggered",
+      "title_zh": "某个工具 / 技能不再触发",
+      "user_phrases": [
+        "不用那个技能",
+        "技能不触发",
+        "不调用技能",
+        "技能没用了",
+        "不再使用",
+        "skill not used",
+        "skill stopped",
+        "never uses the skill",
+        "为什么这个技能不再触发了",
+        "它现在不用 pdf 那个技能了",
+        "以前会自动调用现在不会",
+        "技能好像失效了",
+        "不再走那个流程了",
+        "the skill no longer triggers",
+        "it stopped using this tool",
+        "why doesn't it pick that skill anymore",
+        "my skill seems dead",
+        "it ignores the skill now"
+      ],
+      "skill_signals": {
+        "phrases": [
+          "do not use this skill",
+          "use only when",
+          "do not trigger",
+          "不再使用",
+          "改用",
+          "已废弃"
+        ],
+        "regex": [
+          "\\b(do\\s+not|don't|never)\\s+use\\s+(this|the)\\s+skill\\b",
+          "\\b(deprecated|no\\s+longer\\s+(supported|maintained|recommended))\\b",
+          "\\buse\\s+(this\\s+skill\\s+)?only\\s+(when|if|for)\\b",
+          "\\b(prefer|fall\\s*back)\\s+(using|to)\\b",
+          "(不再使用|改用|已废弃|不再维护|仅在).{0,6}"
+        ]
+      },
+      "explain_zh": "description 或正文里加了「仅在…时使用 / 已废弃 / 改用别的」这类限定，会把原本会触发的场景挡掉。"
+    },
+    {
+      "id": "planning",
+      "title_zh": "计划与执行方式变了（总要先写计划 / 不写计划）",
+      "user_phrases": [
+        "为什么每次都要先给我一个计划",
+        "它现在不写计划直接干",
+        "总要我确认计划才动手",
+        "计划长得看不完",
+        "不列 TODO 了",
+        "it always writes a plan first",
+        "skips planning entirely now",
+        "why so many todo lists",
+        "won't start without a plan",
+        "plans instead of doing"
+      ],
+      "skill_signals": {
+        "phrases": [
+          "create todo",
+          "todo list",
+          "plan mode",
+          "plan first",
+          "make a plan",
+          "step by step",
+          "先写计划",
+          "制定计划",
+          "任务清单",
+          "分步骤执行"
+        ],
+        "regex": [
+          "\\b(start|begin)\\s+with\\s+a\\s+plan\\b",
+          "\\b(create|write|make|draft)\\s+(a\\s+)?plan\\b",
+          "\\b(todo|task)\\s+list\\b",
+          "\\bbreak\\s+(it\\s+)?(down\\s+)?into\\s+steps\\b",
+          "(先(写|出|制定|给出)计划|制定(方案|计划)|任务清单|分步执行)"
+        ]
+      },
+      "explain_zh": "「先出计划再动手 / 用 plan mode / 列 TODO」的规则一变，执行节奏就会跟着变。"
+    },
+    {
+      "id": "speed-cost",
+      "title_zh": "变慢、上下文变长、token 消耗变大",
+      "user_phrases": [
+        "为什么现在这么慢",
+        "感觉它读了好多没用的文件",
+        "token 消耗突然变高",
+        "上下文是不是被塞满了",
+        "每次都重新读一遍项目",
+        "it got much slower",
+        "burning way more tokens",
+        "context window fills up fast",
+        "re-reads the same files every time",
+        "why is this taking so long"
+      ],
+      "skill_signals": {
+        "phrases": [
+          "context window",
+          "context management",
+          "token budget",
+          "token usage",
+          "token counting",
+          "save tokens",
+          "减少 token",
+          "节省上下文",
+          "减少工具调用"
+        ],
+        "regex": [
+          "\\b(minimi[sz]e|reduce|save)\\s+(the\\s+)?(tokens?|context|time)\\b",
+          "\\b(context\\s+window|token\\s+(usage|budget|counting))\\b",
+          "\\b(fewer|reduce)\\s+tool\\s+calls\\b",
+          "\\bavoid\\s+(re-?reading|re-?fetching|re-?scanning)\\b",
+          "(减少|节省|压缩|控制).{0,4}(token|上下文|调用|耗时)"
+        ]
+      },
+      "explain_zh": "「减少 token / 少读文件 / 批量调用」这类成本优化，或反过来要求全文通读，都会改变耗时与上下文占用。"
+    },
+    {
+      "id": "absolute-rules",
+      "title_zh": "规则变成绝对化（always / never / 必须）",
+      "user_phrases": [
+        "为什么它变得这么死板",
+        "什么情况都套同一条规则",
+        "不管我说什么都坚持",
+        "它现在一律不给例外",
+        "规则硬得没法沟通",
+        "applies one rule to everything",
+        "too rigid, no exceptions",
+        "always does it even when wrong",
+        "ignores context and follows the rule",
+        "why is it so absolute"
+      ],
+      "skill_signals": {
+        "phrases": [
+          "always use",
+          "never use",
+          "no exceptions",
+          "every time",
+          "under no",
+          "must always",
+          "一定要",
+          "永远不要",
+          "必须始终"
+        ],
+        "regex": [
+          "\\b(always|never)\\s+(use|do|add|write)\\b",
+          "\\bunder\\s+no\\s+circumstances\\b",
+          "\\b(must|should)\\s+always\\b",
+          "\\bno\\s+exceptions?\\b",
+          "(必须|一律|始终|永远不要|绝不要)"
+        ]
+      },
+      "explain_zh": "把建议改成 always / never / 必须，会让 agent 在任何上下文里都执行同一条规则，看起来死板或不听劝。"
+    }
+  ],
+  "platform_tokens": [
+    {
+      "id": "pwsh-cmdlet",
+      "regex": "\\b(Get|Set|New|Remove|Add|Clear|Copy|Move|Rename|Test|Invoke|Select|Where|ForEach|Start|Stop|Restart|Out|Write|Read|Import|Export|Join|Split|Sort|Group|Measure|Format)-[A-Z][A-Za-z0-9]+\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "Get-ChildItem",
+      "explain_zh": "PowerShell cmdlet，macOS/Linux 默认没有 pwsh，照抄会 command not found。"
+    },
+    {
+      "id": "pwsh-exe",
+      "regex": "\\bpowershell(\\.exe)?\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "powershell.exe -NoProfile",
+      "explain_zh": "Windows 自带的 PowerShell 可执行文件，其它平台没有。"
+    },
+    {
+      "id": "pwsh-core",
+      "regex": "\\bpwsh(\\.exe)?\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "pwsh -File build.ps1",
+      "explain_zh": "PowerShell 7 的 pwsh，Windows 以外的机器通常要额外安装。"
+    },
+    {
+      "id": "ps1-ext",
+      "regex": "\\.ps1\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "file",
+      "example": "setup.ps1",
+      "explain_zh": ".ps1 脚本要靠 PowerShell 执行，Windows 以外没有默认解释器。"
+    },
+    {
+      "id": "psm1-ext",
+      "regex": "\\.psm1\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "file",
+      "example": "module.psm1",
+      "explain_zh": "PowerShell 模块文件，只能在 PowerShell 里导入。"
+    },
+    {
+      "id": "psd1-ext",
+      "regex": "\\.psd1\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "file",
+      "example": "module.psd1",
+      "explain_zh": "PowerShell 模块清单，只有 PowerShell 会读。"
+    },
+    {
+      "id": "ps-execution-policy",
+      "regex": "\\bSet-ExecutionPolicy\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "Set-ExecutionPolicy RemoteSigned",
+      "explain_zh": "PowerShell 执行策略，非 Windows 平台没有这个概念。"
+    },
+    {
+      "id": "ps-env-var",
+      "regex": "\\$\\{?env:[A-Za-z_][A-Za-z0-9_]*\\}?",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "syntax",
+      "example": "$env:APPDATA",
+      "explain_zh": "PowerShell 的环境变量语法，bash 里要用 $VAR 或 ${VAR}。"
+    },
+    {
+      "id": "ps-hashtable",
+      "regex": "@\\{\\s*[A-Za-z_]\\w*\\s*=",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "syntax",
+      "example": "@{ Name = 'demo' }",
+      "explain_zh": "PowerShell 哈希表字面量，别的 shell 不认识。"
+    },
+    {
+      "id": "ps-null",
+      "regex": "\\$null\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "syntax",
+      "example": "Remove-Item $null",
+      "explain_zh": "$null 是 PowerShell 的空值变量，其它 shell 里不存在。"
+    },
+    {
+      "id": "ps-pipeline-cmdlet",
+      "regex": "\\|\\s*(Where-Object|ForEach-Object|Select-Object)\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "syntax",
+      "example": "| Where-Object { $_.Name }",
+      "explain_zh": "PowerShell 的对象管道写法，管道里传的是对象而不是文本。"
+    },
+    {
+      "id": "ps-no-profile",
+      "regex": "-{1,2}(NoProfile|NonInteractive|EncodedCommand)\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "syntax",
+      "example": "-NoProfile",
+      "explain_zh": "PowerShell 专有启动参数，其它解释器没有。"
+    },
+    {
+      "id": "cmd-env-percent",
+      "regex": "%[A-Za-z_][A-Za-z0-9_]*%",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "syntax",
+      "example": "%APPDATA%",
+      "explain_zh": "cmd.exe 的变量展开语法，bash/zsh 里要用 $VAR。"
+    },
+    {
+      "id": "cmd-dir-slash",
+      "regex": "\\bdir\\s+/[a-z]\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "dir /s",
+      "explain_zh": "cmd.exe 的 dir 开关，Unix 的 ls 不认。"
+    },
+    {
+      "id": "cmd-copy-slash",
+      "regex": "\\bcopy\\s+/[a-z]\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "copy /y src dst",
+      "explain_zh": "cmd.exe 的 copy 开关，Unix 要用 cp。"
+    },
+    {
+      "id": "cmd-del-slash",
+      "regex": "\\bdel\\s+/[a-z]\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "del /q temp.txt",
+      "explain_zh": "cmd.exe 的 del 开关，Unix 要用 rm。"
+    },
+    {
+      "id": "cmd-xcopy",
+      "regex": "\\bxcopy\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "xcopy /E src dst",
+      "explain_zh": "Windows 专用拷贝命令。"
+    },
+    {
+      "id": "cmd-robocopy",
+      "regex": "\\brobocopy\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "robocopy src dst",
+      "explain_zh": "Windows 专用镜像拷贝工具。"
+    },
+    {
+      "id": "cmd-call-bat",
+      "regex": "\\bcall\\s+[\\w.-]+\\.(bat|cmd)\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "syntax",
+      "example": "call build.bat",
+      "explain_zh": "cmd.exe 里调用批处理要用 call，Unix shell 没有这个写法。"
+    },
+    {
+      "id": "bat-ext",
+      "regex": "\\.(bat|cmd)\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "file",
+      "example": "build.bat",
+      "explain_zh": "批处理文件只有 Windows 能直接执行。"
+    },
+    {
+      "id": "cmd-slash-c",
+      "regex": "\\bcmd(\\.exe)?\\s+/c\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "cmd /c dir",
+      "explain_zh": "用 cmd.exe 跑一条命令，非 Windows 没有 cmd。"
+    },
+    {
+      "id": "win-drive-path",
+      "regex": "[A-Za-z]:\\\\",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "path",
+      "example": "C:\\Users\\demo",
+      "explain_zh": "盘符路径，Unix 上不存在。"
+    },
+    {
+      "id": "win-unc-path",
+      "regex": "\\\\\\\\[A-Za-z0-9._-]+\\\\",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "path",
+      "example": "\\\\server\\share",
+      "explain_zh": "UNC 网络路径，Unix 用 /mnt 或挂载点。"
+    },
+    {
+      "id": "win-users-dir",
+      "regex": "\\\\Users\\\\",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "path",
+      "example": "C:\\Users\\demo\\project",
+      "explain_zh": "Windows 用户目录路径，Unix 是 /home 或 /Users。"
+    },
+    {
+      "id": "win-program-files",
+      "regex": "Program Files",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "path",
+      "example": "C:\\Program Files\\App",
+      "explain_zh": "Windows 安装目录，别的平台没有。"
+    },
+    {
+      "id": "win-localappdata",
+      "regex": "%LOCALAPPDATA%",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "path",
+      "example": "%LOCALAPPDATA%\\Temp",
+      "explain_zh": "Windows 本地应用数据目录变量。"
+    },
+    {
+      "id": "win-userprofile",
+      "regex": "%USERPROFILE%",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "path",
+      "example": "%USERPROFILE%\\.config",
+      "explain_zh": "Windows 用户主目录变量，Unix 用 $HOME。"
+    },
+    {
+      "id": "win-registry-hive",
+      "regex": "\\b(HKLM|HKCU|HKEY_[A-Z_]+)\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "path",
+      "example": "HKLM\\SOFTWARE",
+      "explain_zh": "Windows 注册表根键，其它平台没有注册表。"
+    },
+    {
+      "id": "win-reg-cmd",
+      "regex": "\\breg\\s+(add|query|delete)\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "reg query HKLM",
+      "explain_zh": "Windows 注册表命令行工具。"
+    },
+    {
+      "id": "win-taskkill",
+      "regex": "\\btaskkill\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "taskkill /F /PID 1234",
+      "explain_zh": "Windows 结束进程命令，Unix 用 kill。"
+    },
+    {
+      "id": "win-tasklist",
+      "regex": "\\btasklist\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "tasklist",
+      "explain_zh": "Windows 列进程命令，Unix 用 ps。"
+    },
+    {
+      "id": "win-icacls",
+      "regex": "\\bicacls\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "icacls . /grant",
+      "explain_zh": "Windows 权限设置命令，Unix 用 chmod/chown。"
+    },
+    {
+      "id": "win-where-exe",
+      "regex": "\\bwhere\\.exe\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "where.exe python",
+      "explain_zh": "Windows 查找可执行文件，Unix 用 which/command -v。"
+    },
+    {
+      "id": "win-wsl",
+      "regex": "\\bwsl(\\.exe)?\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "wsl.exe -d Ubuntu",
+      "explain_zh": "WSL 只在 Windows 上存在。"
+    },
+    {
+      "id": "win-wsl-mnt",
+      "regex": "/mnt/[a-z]/",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "path",
+      "example": "/mnt/c/Users/demo",
+      "explain_zh": "WSL 里访问 Windows 盘的路径，纯 Linux 上没有。"
+    },
+    {
+      "id": "win-choco",
+      "regex": "\\bchoco\\s+install\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "choco install nodejs",
+      "explain_zh": "Chocolatey 包管理器，只装在 Windows。"
+    },
+    {
+      "id": "win-winget",
+      "regex": "\\bwinget\\s+install\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "winget install Git.Git",
+      "explain_zh": "Windows 包管理器 winget。"
+    },
+    {
+      "id": "win-net-cmd",
+      "regex": "\\bnet\\s+(start|stop|use)\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "net start spooler",
+      "explain_zh": "Windows net 命令，Unix 用 service/systemctl。"
+    },
+    {
+      "id": "win-py-launcher",
+      "regex": "\\bpy\\s+-3(\\.\\d+)?\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "py -3 script.py",
+      "explain_zh": "Windows 的 Python 启动器 py，Unix 上一般直接用 python3。"
+    },
+    {
+      "id": "win-certutil",
+      "regex": "\\bcertutil\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "certutil -hashfile a.txt SHA256",
+      "explain_zh": "Windows 证书/哈希工具，Unix 用 openssl。"
+    },
+    {
+      "id": "win-gpupdate",
+      "regex": "\\bgpupdate\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "gpupdate /force",
+      "explain_zh": "Windows 组策略更新命令。"
+    },
+    {
+      "id": "win-sc-exe",
+      "regex": "\\bsc\\.exe\\b",
+      "only_on": [
+        "windows"
+      ],
+      "kind": "command",
+      "example": "sc.exe query",
+      "explain_zh": "Windows 服务控制命令，Unix 用 systemctl。"
+    },
+    {
+      "id": "mac-brew",
+      "regex": "\\bbrew\\s+(install|tap|list|upgrade|link|services)\\b",
+      "only_on": [
+        "macos"
+      ],
+      "kind": "command",
+      "example": "brew install jq",
+      "explain_zh": "Homebrew 是 macOS 的包管理器，Linux 上默认没有。"
+    },
+    {
+      "id": "mac-brew-path",
+      "regex": "/opt/homebrew/",
+      "only_on": [
+        "macos"
+      ],
+      "kind": "path",
+      "example": "/opt/homebrew/bin",
+      "explain_zh": "Apple Silicon 上 Homebrew 的安装路径。"
+    },
+    {
+      "id": "mac-open-a",
+      "regex": "\\bopen\\s+-a\\b",
+      "only_on": [
+        "macos"
+      ],
+      "kind": "command",
+      "example": "open -a Safari",
+      "explain_zh": "macOS 用 open 打开应用，Linux 用 xdg-open。"
+    },
+    {
+      "id": "mac-pbcopy",
+      "regex": "\\b(pbcopy|pbpaste)\\b",
+      "only_on": [
+        "macos"
+      ],
+      "kind": "command",
+      "example": "pbcopy",
+      "explain_zh": "macOS 剪贴板命令，Linux 用 xclip/wl-copy。"
+    },
+    {
+      "id": "mac-osascript",
+      "regex": "\\bosascript\\b",
+      "only_on": [
+        "macos"
+      ],
+      "kind": "command",
+      "example": "osascript -e \"beep\"",
+      "explain_zh": "AppleScript 解释器，只有 macOS 有。"
+    },
+    {
+      "id": "mac-launchctl",
+      "regex": "\\blaunchctl\\b",
+      "only_on": [
+        "macos"
+      ],
+      "kind": "command",
+      "example": "launchctl load ~/Library/LaunchAgents/x.plist",
+      "explain_zh": "macOS 服务管理，Linux 用 systemctl。"
+    },
+    {
+      "id": "mac-library",
+      "regex": "~/Library/",
+      "only_on": [
+        "macos"
+      ],
+      "kind": "path",
+      "example": "~/Library/Application Support",
+      "explain_zh": "macOS 用户库目录，Linux 上不存在。"
+    },
+    {
+      "id": "mac-applications",
+      "regex": "/Applications/",
+      "only_on": [
+        "macos"
+      ],
+      "kind": "path",
+      "example": "/Applications/Xcode.app",
+      "explain_zh": "macOS 应用安装目录。"
+    },
+    {
+      "id": "mac-defaults",
+      "regex": "\\bdefaults\\s+(write|read|delete)\\b",
+      "only_on": [
+        "macos"
+      ],
+      "kind": "command",
+      "example": "defaults write com.apple.dock",
+      "explain_zh": "macOS 读写应用偏好的命令。"
+    },
+    {
+      "id": "mac-xcode-select",
+      "regex": "\\bxcode-select\\b",
+      "only_on": [
+        "macos"
+      ],
+      "kind": "command",
+      "example": "xcode-select --install",
+      "explain_zh": "macOS 命令行工具安装命令。"
+    },
+    {
+      "id": "mac-sed-inplace",
+      "regex": "sed\\s+-i\\s+''",
+      "only_on": [
+        "macos"
+      ],
+      "kind": "command",
+      "example": "sed -i '' -e 's/a/b/'",
+      "explain_zh": "BSD sed 的 -i 必须带空串参数，Linux 的 GNU sed 会报错。"
+    },
+    {
+      "id": "mac-codesign",
+      "regex": "\\bcodesign\\b",
+      "only_on": [
+        "macos"
+      ],
+      "kind": "command",
+      "example": "codesign --verify app",
+      "explain_zh": "macOS 代码签名工具。"
+    },
+    {
+      "id": "mac-hdiutil",
+      "regex": "\\bhdiutil\\b",
+      "only_on": [
+        "macos"
+      ],
+      "kind": "command",
+      "example": "hdiutil attach img.dmg",
+      "explain_zh": "macOS 挂载 dmg 的命令。"
+    },
+    {
+      "id": "mac-diskutil",
+      "regex": "\\bdiskutil\\b",
+      "only_on": [
+        "macos"
+      ],
+      "kind": "command",
+      "example": "diskutil list",
+      "explain_zh": "macOS 磁盘工具，Linux 用 lsblk/fdisk。"
+    },
+    {
+      "id": "mac-plistbuddy",
+      "regex": "\\bPlistBuddy\\b",
+      "only_on": [
+        "macos"
+      ],
+      "kind": "command",
+      "example": "/usr/libexec/PlistBuddy -c Print",
+      "explain_zh": "macOS 读写 plist 的工具。"
+    },
+    {
+      "id": "mac-security-identity",
+      "regex": "\\bsecurity\\s+find-identity\\b",
+      "only_on": [
+        "macos"
+      ],
+      "kind": "command",
+      "example": "security find-identity -v",
+      "explain_zh": "macOS 查看证书身份的命令。"
+    },
+    {
+      "id": "mac-spctl",
+      "regex": "\\bspctl\\b",
+      "only_on": [
+        "macos"
+      ],
+      "kind": "command",
+      "example": "spctl --assess app",
+      "explain_zh": "macOS 校验 app 签名/公证状态。"
+    },
+    {
+      "id": "mac-xattr",
+      "regex": "\\bxattr\\b",
+      "only_on": [
+        "macos"
+      ],
+      "kind": "command",
+      "example": "xattr -d com.apple.quarantine app",
+      "explain_zh": "macOS 扩展属性命令，Linux 上是 getfattr/setfattr。"
+    },
+    {
+      "id": "mac-sips",
+      "regex": "\\bsips\\s+-",
+      "only_on": [
+        "macos"
+      ],
+      "kind": "command",
+      "example": "sips -Z 1024 img.png",
+      "explain_zh": "macOS 自带图片处理命令。"
+    },
+    {
+      "id": "linux-apt",
+      "regex": "\\bapt(-get)?\\s+(install|update|upgrade|remove)\\b",
+      "only_on": [
+        "linux"
+      ],
+      "kind": "command",
+      "example": "apt-get install curl",
+      "explain_zh": "Debian/Ubuntu 包管理器，macOS/Windows 没有。"
+    },
+    {
+      "id": "linux-systemctl",
+      "regex": "\\bsystemctl\\s+(start|stop|restart|status|enable|disable)\\b",
+      "only_on": [
+        "linux"
+      ],
+      "kind": "command",
+      "example": "systemctl restart nginx",
+      "explain_zh": "systemd 服务管理，只有 Linux 有。"
+    },
+    {
+      "id": "linux-journalctl",
+      "regex": "\\bjournalctl\\b",
+      "only_on": [
+        "linux"
+      ],
+      "kind": "command",
+      "example": "journalctl -u nginx",
+      "explain_zh": "systemd 日志工具，只有 Linux 有。"
+    },
+    {
+      "id": "linux-proc",
+      "regex": "/proc/(cpuinfo|meminfo|self|\\d+)",
+      "only_on": [
+        "linux"
+      ],
+      "kind": "path",
+      "example": "/proc/cpuinfo",
+      "explain_zh": "/proc 是 Linux 的虚拟文件系统，macOS/Windows 没有。"
+    },
+    {
+      "id": "linux-os-release",
+      "regex": "/etc/os-release",
+      "only_on": [
+        "linux"
+      ],
+      "kind": "path",
+      "example": "/etc/os-release",
+      "explain_zh": "Linux 发行版信息文件。"
+    },
+    {
+      "id": "linux-yum-dnf",
+      "regex": "\\b(yum|dnf)\\s+install\\b",
+      "only_on": [
+        "linux"
+      ],
+      "kind": "command",
+      "example": "dnf install curl",
+      "explain_zh": "RHEL/Fedora 包管理器。"
+    },
+    {
+      "id": "linux-pacman",
+      "regex": "\\bpacman\\s+-S\\b",
+      "only_on": [
+        "linux"
+      ],
+      "kind": "command",
+      "example": "pacman -S curl",
+      "explain_zh": "Arch Linux 包管理器。"
+    },
+    {
+      "id": "linux-udevadm",
+      "regex": "\\budevadm\\b",
+      "only_on": [
+        "linux"
+      ],
+      "kind": "command",
+      "example": "udevadm trigger",
+      "explain_zh": "Linux 设备管理工具。"
+    },
+    {
+      "id": "linux-netplan",
+      "regex": "\\bnetplan\\s+(apply|try)\\b",
+      "only_on": [
+        "linux"
+      ],
+      "kind": "command",
+      "example": "netplan apply",
+      "explain_zh": "Ubuntu 网络配置工具。"
+    },
+    {
+      "id": "linux-selinux",
+      "regex": "\\b(sestatus|setenforce|semanage)\\b",
+      "only_on": [
+        "linux"
+      ],
+      "kind": "command",
+      "example": "sestatus",
+      "explain_zh": "SELinux 管理命令，只有 Linux 有。"
+    },
+    {
+      "id": "linux-iptables",
+      "regex": "\\biptables\\b",
+      "only_on": [
+        "linux"
+      ],
+      "kind": "command",
+      "example": "iptables -L",
+      "explain_zh": "Linux 防火墙命令。"
+    },
+    {
+      "id": "linux-useradd",
+      "regex": "\\b(useradd|usermod|groupadd)\\b",
+      "only_on": [
+        "linux"
+      ],
+      "kind": "command",
+      "example": "useradd -m deploy",
+      "explain_zh": "Linux 用户管理命令，macOS 用 dscl。"
+    },
+    {
+      "id": "linux-systemd-unit",
+      "regex": "\\.service\\b",
+      "only_on": [
+        "linux"
+      ],
+      "kind": "file",
+      "example": "app.service",
+      "explain_zh": "systemd 单元文件，只有 Linux 的 systemd 会读。"
+    },
+    {
+      "id": "linux-systemd-dir",
+      "regex": "/etc/systemd/",
+      "only_on": [
+        "linux"
+      ],
+      "kind": "path",
+      "example": "/etc/systemd/system",
+      "explain_zh": "systemd 单元目录。"
+    },
+    {
+      "id": "linux-fstab",
+      "regex": "/etc/fstab",
+      "only_on": [
+        "linux"
+      ],
+      "kind": "path",
+      "example": "/etc/fstab",
+      "explain_zh": "Linux 挂载配置，macOS 用 /etc/auto_master。"
+    },
+    {
+      "id": "linux-lsb-release",
+      "regex": "\\blsb_release\\b",
+      "only_on": [
+        "linux"
+      ],
+      "kind": "command",
+      "example": "lsb_release -a",
+      "explain_zh": "Linux 发行版查询命令。"
+    },
+    {
+      "id": "linux-apt-dir",
+      "regex": "/etc/apt/",
+      "only_on": [
+        "linux"
+      ],
+      "kind": "path",
+      "example": "/etc/apt/sources.list",
+      "explain_zh": "APT 配置目录，只有 Debian/Ubuntu 系 Linux 有。"
+    },
+    {
+      "id": "posix-shebang",
+      "regex": "#!\\s*/(usr/)?bin/(env\\s+)?(ba|z|da)?sh\\b",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "syntax",
+      "example": "#!/usr/bin/env bash",
+      "explain_zh": "shebang 依赖 Unix 路径；Windows 不按 shebang 选择解释器。"
+    },
+    {
+      "id": "posix-shebang-python",
+      "regex": "#!\\s*/(usr/)?bin/(env\\s+)?python",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "syntax",
+      "example": "#!/usr/bin/env python3",
+      "explain_zh": "Python 脚本的 shebang 只在 Unix 上生效，Windows 要靠 py 启动器。"
+    },
+    {
+      "id": "posix-heredoc",
+      "regex": "<<\\s*['\"]?[A-Za-z_]{2,}",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "syntax",
+      "example": "<<EOF",
+      "explain_zh": "heredoc 是 Unix shell 语法，PowerShell 用 here-string @\"…\"@。"
+    },
+    {
+      "id": "posix-chmod",
+      "regex": "\\bchmod\\s+[+0-7]",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "command",
+      "example": "chmod +x run.sh",
+      "explain_zh": "chmod 是 Unix 权限命令，Windows 没有等价的权限位。"
+    },
+    {
+      "id": "posix-exec-bit",
+      "regex": "\\bchmod\\s+(0?7[0-7]{2}|\\+x)\\b",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "permission",
+      "example": "chmod 755 deploy.sh",
+      "explain_zh": "依赖可执行位；在 Windows/无 exec 位的文件系统上直接跑会失败。"
+    },
+    {
+      "id": "posix-chown",
+      "regex": "\\bchown\\s+[A-Za-z0-9_.:-]+",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "command",
+      "example": "chown app:app data",
+      "explain_zh": "chown 是 Unix 所有权命令，Windows 不支持。"
+    },
+    {
+      "id": "posix-ln-s",
+      "regex": "\\bln\\s+-s\\b",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "command",
+      "example": "ln -s target link",
+      "explain_zh": "软链接；Windows 上要管理员权限或用 mklink。"
+    },
+    {
+      "id": "posix-xargs",
+      "regex": "\\bxargs\\b",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "command",
+      "example": "xargs -0 rm",
+      "explain_zh": "xargs 是 Unix 工具，Windows 默认没有。"
+    },
+    {
+      "id": "gnu-sed-inplace",
+      "regex": "\\bsed\\s+-i\\b",
+      "only_on": [
+        "linux"
+      ],
+      "kind": "command",
+      "example": "sed -i 's/a/b/' f.txt",
+      "explain_zh": "GNU sed 的 -i 在 macOS 的 BSD sed 上会报错（要 sed -i ''）。"
+    },
+    {
+      "id": "posix-awk",
+      "regex": "\\bawk\\s+['\"]",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "command",
+      "example": "awk '{print $1}'",
+      "explain_zh": "awk 是 Unix 文本工具，Windows 默认没有。"
+    },
+    {
+      "id": "posix-grep-flags",
+      "regex": "\\bgrep\\s+-[A-Za-z]*[rREl][A-Za-z]*\\b",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "command",
+      "example": "grep -rn TODO .",
+      "explain_zh": "grep 是 Unix 工具；Windows 自带的是 findstr。"
+    },
+    {
+      "id": "posix-find-name",
+      "regex": "\\bfind\\s+\\.\\s+-name\\b",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "command",
+      "example": "find . -name '*.log'",
+      "explain_zh": "Unix find 的语法，PowerShell 用 Get-ChildItem -Filter。"
+    },
+    {
+      "id": "posix-sudo",
+      "regex": "\\bsudo\\s+\\w",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "command",
+      "example": "sudo systemctl restart nginx",
+      "explain_zh": "sudo 是 Unix 提权方式，Windows 需要管理员终端。"
+    },
+    {
+      "id": "posix-usr-bin",
+      "regex": "/usr/bin/",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "path",
+      "example": "/usr/bin/env",
+      "explain_zh": "Unix 系统路径，Windows 上不存在。"
+    },
+    {
+      "id": "posix-usr-local-bin",
+      "regex": "/usr/local/bin/",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "path",
+      "example": "/usr/local/bin/python3",
+      "explain_zh": "Unix 本地安装路径。"
+    },
+    {
+      "id": "posix-tmp",
+      "regex": "/tmp/",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "path",
+      "example": "/tmp/build.log",
+      "explain_zh": "Unix 临时目录；Windows 用 %TEMP%。"
+    },
+    {
+      "id": "posix-dev-null",
+      "regex": "/dev/null",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "path",
+      "example": "command > /dev/null",
+      "explain_zh": "/dev/null 是 Unix 设备，Windows 用 NUL。"
+    },
+    {
+      "id": "posix-home-var",
+      "regex": "\\$HOME\\b",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "syntax",
+      "example": "$HOME/.config",
+      "explain_zh": "$HOME 是 Unix 环境变量，Windows 用 %USERPROFILE%。"
+    },
+    {
+      "id": "posix-export",
+      "regex": "\\bexport\\s+[A-Z_][A-Z0-9_]*=",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "syntax",
+      "example": "export PATH=\"$PWD/bin:$PATH\"",
+      "explain_zh": "export 是 Unix shell 语法，cmd 用 set，PowerShell 用 $env:。"
+    },
+    {
+      "id": "posix-source",
+      "regex": "\\bsource\\s+[\\w./-]+\\.sh\\b",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "command",
+      "example": "source ./env.sh",
+      "explain_zh": "source 是 bash/zsh 内建命令，PowerShell 用 . ./env.ps1。"
+    },
+    {
+      "id": "posix-set-e",
+      "regex": "\\bset\\s+-[euxo]+\\b",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "syntax",
+      "example": "set -euo pipefail",
+      "explain_zh": "shell 严格模式选项，其它平台无意义。"
+    },
+    {
+      "id": "posix-tail-f",
+      "regex": "\\btail\\s+-f\\b",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "command",
+      "example": "tail -f app.log",
+      "explain_zh": "tail -f 是 Unix 用法，PowerShell 用 Get-Content -Wait。"
+    },
+    {
+      "id": "posix-dot-slash-script",
+      "regex": "(^|[\\s`(])\\./[\\w.-]+\\.sh\\b",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "permission",
+      "example": "./deploy.sh",
+      "explain_zh": "直接执行脚本依赖可执行位和 shebang，Windows 上跑不了。"
+    },
+    {
+      "id": "posix-curl-pipe-sh",
+      "regex": "\\bcurl\\s+-[A-Za-z]*[fsSL]+[^|]*\\|\\s*(ba)?sh\\b",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "command",
+      "example": "curl -fsSL https://x.test/i.sh | bash",
+      "explain_zh": "管道执行远程脚本的写法，Windows PowerShell 不认。"
+    },
+    {
+      "id": "posix-rsync",
+      "regex": "\\brsync\\s+-[a-zA-Z]*[avz]",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "command",
+      "example": "rsync -av src/ dst/",
+      "explain_zh": "rsync 在 macOS/Linux 自带，Windows 一般没有。"
+    },
+    {
+      "id": "posix-nohup",
+      "regex": "\\bnohup\\b",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "command",
+      "example": "nohup ./run.sh &",
+      "explain_zh": "nohup 是 Unix 后台运行方式。"
+    },
+    {
+      "id": "posix-ps-aux",
+      "regex": "\\bps\\s+(aux|-ef)\\b",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "command",
+      "example": "ps aux",
+      "explain_zh": "ps 是 Unix 进程查看命令，Windows 用 tasklist。"
+    },
+    {
+      "id": "posix-kill-9",
+      "regex": "\\bkill\\s+-9\\b",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "command",
+      "example": "kill -9 1234",
+      "explain_zh": "kill 信号是 Unix 用法，Windows 用 taskkill /F。"
+    },
+    {
+      "id": "posix-crontab",
+      "regex": "\\bcrontab\\s+-[el]\\b",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "command",
+      "example": "crontab -e",
+      "explain_zh": "cron 是 Unix 定时任务，Windows 用任务计划程序。"
+    },
+    {
+      "id": "posix-ssh-keygen",
+      "regex": "\\bssh-keygen\\b",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "command",
+      "example": "ssh-keygen -t ed25519",
+      "explain_zh": "ssh-keygen 通常随 Unix OpenSSH 提供。"
+    },
+    {
+      "id": "posix-var-default",
+      "regex": "\\$\\{[A-Z_][A-Z0-9_]*:-",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "syntax",
+      "example": "${PORT:-3000}",
+      "explain_zh": "bash 的参数默认值展开，cmd/PowerShell 语法不同。"
+    },
+    {
+      "id": "posix-double-bracket",
+      "regex": "\\[\\[\\s+(-[a-z]|\\$\\w+)\\s+\\S+\\s*\\]\\]",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "syntax",
+      "example": "[[ -f package.json ]]",
+      "explain_zh": "bash/zsh 的 [[ ]] 条件判断，PowerShell 用 Test-Path。"
+    },
+    {
+      "id": "posix-here-string",
+      "regex": "<<<\\s*\\S",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "syntax",
+      "example": "<<< \"$var\"",
+      "explain_zh": "bash 的 here-string，只在 bash/zsh 里可用。"
+    },
+    {
+      "id": "posix-env-prefix",
+      "regex": "\\b[A-Z][A-Z0-9_]{2,}=\\S+\\s+[a-z][\\w./-]*\\s",
+      "only_on": [
+        "posix"
+      ],
+      "kind": "syntax",
+      "example": "NODE_ENV=production npm start",
+      "explain_zh": "命令前临时设置环境变量是 Unix 写法，PowerShell 会当成参数。"
+    }
+  ]
+}

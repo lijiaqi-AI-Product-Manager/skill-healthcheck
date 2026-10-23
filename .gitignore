@@ -1,0 +1,7 @@
+node_modules/
+dist/
+coverage/
+demo/.sandbox/
+research/.cache/
+tasks/
+*.log
