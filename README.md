@@ -1,6 +1,22 @@
 # skill-healthcheck
 
-[English](README.en.md) | 中文
+[English](README.en.md) | 中文 | [日本語](README.ja.md) | [한국어](README.ko.md) | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md) | [Português](README.pt-BR.md)
+
+<p align="center">
+  <a href="https://github.com/lijiaqimun-coder/skill-healthcheck/actions/workflows/ci.yml"><img src="https://github.com/lijiaqimun-coder/skill-healthcheck/actions/workflows/ci.yml/badge.svg" alt="CI 状态"></a>
+  <img src="https://img.shields.io/badge/node-22.19%2B-brightgreen" alt="Node 22.19+">
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT">
+  <img src="https://img.shields.io/badge/platforms-linux%20%7C%20macos%20%7C%20windows-lightgrey" alt="Linux, macOS, Windows">
+  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="欢迎 PR">
+</p>
+
+<p align="center">
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&pause=1200&color=3FB950&center=true&vCenter=true&width=720&lines=Find+skills+that+silently+stopped+working;Know+when+your+agent%27s+behavior+changed" alt="找出悄悄失效的 skill">
+</p>
+
+<p align="center">
+  <img src="docs/demo.gif" alt="skill-healthcheck 演示：上游改了 description，why 把行为变化归因到具体 skill" width="900">
+</p>
 
 > 你的 agent 最近变笨了？可能是三周前装的那个 skill。
 
@@ -12,7 +28,7 @@
 
 一个命令、一次体检、一屏输出。它只读不写，从不自动更新。
 
-```
+```text
 $ skill-healthcheck
 skill-healthcheck · DeepSeek Harness · profile desktop · 2026-10-23 11:57
 宿主  dsh 0.2.1-rc.2 ✓
@@ -49,14 +65,14 @@ git clone <this repo> && cd skill-healthcheck && npm install && npm run build &&
 
 ## 用法
 
-| 命令 | 作用 |
-|---|---|
-| `skill-healthcheck` | 一屏体检：宿主、插件、技能 |
-| `skill-healthcheck why "<现象>"` | 按时间线反查可疑技能，例如 `why "不用中文回答了"`；也可以用 `--since 2026-10-01` |
-| `skill-healthcheck log` | 记录：装了什么、改了什么、什么时候（`~` 表示时间按文件时间估计） |
-| `skill-healthcheck ls` | 平台实际会加载哪些技能，哪些被遮蔽、被丢弃 |
-| `skill-healthcheck adopt <name> <来源>` | 登记技能来源：`github:owner/repo/path`、GitHub 链接或 `<git-url>#<path>` |
-| `skill-healthcheck record` | 只记录一次快照（给钩子、定时任务用） |
+| 命令                                    | 作用                                                                             |
+| --------------------------------------- | -------------------------------------------------------------------------------- |
+| `skill-healthcheck`                     | 一屏体检：宿主、插件、技能                                                       |
+| `skill-healthcheck why "<现象>"`        | 按时间线反查可疑技能，例如 `why "不用中文回答了"`；也可以用 `--since 2026-10-01` |
+| `skill-healthcheck log`                 | 记录：装了什么、改了什么、什么时候（`~` 表示时间按文件时间估计）                 |
+| `skill-healthcheck ls`                  | 平台实际会加载哪些技能，哪些被遮蔽、被丢弃                                       |
+| `skill-healthcheck adopt <name> <来源>` | 登记技能来源：`github:owner/repo/path`、GitHub 链接或 `<git-url>#<path>`         |
+| `skill-healthcheck record`              | 只记录一次快照（给钩子、定时任务用）                                             |
 
 通用选项：`--all` 展开全部、`--json` 机器可读、`--offline` 不联网、`--no-sessions` 不读会话日志、`--platform dsh|generic`、`--profile <名字>`、`--cwd <项目目录>`。
 
@@ -66,26 +82,26 @@ git clone <this repo> && cd skill-healthcheck && npm install && npm run build &&
 
 **技能：本地（离线，确定性）**
 
-| 问题 | 为什么会静默失效 |
-|---|---|
-| frontmatter 不合法（name 不是 kebab-case、布尔值写错、用了旧字段名） | dsh 直接丢弃整个技能，只在日志里打一行警告 |
-| 同名遮蔽 | 项目级 `.dsh/skills` 里的同名技能会盖住你全局装的那个 |
-| 嵌套太深 | 只认 `<根>/<名>/SKILL.md`；把整个技能仓库 clone 进去，一个都不生效 |
-| 放错目录 | dsh 不扫描 `~/.claude/skills`、`~/.codex/skills` |
-| description 超过 500 字符 | 目录里被截断，结尾的触发词模型看不到 |
-| 曾经常用、某天之后再没调用过 | 从会话日志里看到的证据，比任何推断都硬 |
+| 问题                                                                 | 为什么会静默失效                                                   |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| frontmatter 不合法（name 不是 kebab-case、布尔值写错、用了旧字段名） | dsh 直接丢弃整个技能，只在日志里打一行警告                         |
+| 同名遮蔽                                                             | 项目级 `.dsh/skills` 里的同名技能会盖住你全局装的那个              |
+| 嵌套太深                                                             | 只认 `<根>/<名>/SKILL.md`；把整个技能仓库 clone 进去，一个都不生效 |
+| 放错目录                                                             | dsh 不扫描 `~/.claude/skills`、`~/.codex/skills`                   |
+| description 超过 500 字符                                            | 目录里被截断，结尾的触发词模型看不到                               |
+| 曾经常用、某天之后再没调用过                                         | 从会话日志里看到的证据，比任何推断都硬                             |
 
 **技能：上游（git，任何托管平台）**
 
-| 上游变化 | 影响 |
-|---|---|
-| 改了 `description` | ⚠ 最高危：触发条件变了，可能从此不再被调用。会列出删掉和新增的词，标出语言/语气类规则 |
-| 改了 `name` / 目录移动 | `/旧名字` 入口失效，会告诉你新入口 |
-| 仓库删了 / 技能删了 | 本地副本已无人维护（只有明确的 404 才算删除，网络失败只报"无法检查"） |
-| `scripts/` 新增可执行文件 | 需要人来审代码 |
-| description 变长或超过上限 | 会被截断，或者每轮都多占上下文 |
-| 正文变长 | 每次调用多占多少 token（正文按需加载，不会挤掉别的技能） |
-| 新增平台专用写法 | 比如 PowerShell cmdlet、`brew`、`/usr/bin`，在你的系统上可能跑不起来 |
+| 上游变化                   | 影响                                                                                  |
+| -------------------------- | ------------------------------------------------------------------------------------- |
+| 改了 `description`         | ⚠ 最高危：触发条件变了，可能从此不再被调用。会列出删掉和新增的词，标出语言/语气类规则 |
+| 改了 `name` / 目录移动     | `/旧名字` 入口失效，会告诉你新入口                                                    |
+| 仓库删了 / 技能删了        | 本地副本已无人维护（只有明确的 404 才算删除，网络失败只报"无法检查"）                 |
+| `scripts/` 新增可执行文件  | 需要人来审代码                                                                        |
+| description 变长或超过上限 | 会被截断，或者每轮都多占上下文                                                        |
+| 正文变长                   | 每次调用多占多少 token（正文按需加载，不会挤掉别的技能）                              |
+| 新增平台专用写法           | 比如 PowerShell cmdlet、`brew`、`/usr/bin`，在你的系统上可能跑不起来                  |
 
 **插件（dsh）**：profile 里装的插件是否与当前 dsh 版本兼容（`engines.dsh` / peerDependencies）、是否靠版本豁免在跑、npm 上有没有可升级的新版本、是否被作者弃用。
 
@@ -105,12 +121,12 @@ git clone <this repo> && cd skill-healthcheck && npm install && npm run build &&
 
 我们从 15 个公开技能仓库（anthropics/skills、obra/superpowers、vercel-labs/agent-skills、deepseek-ai/deepseek-harness 等）收集了 74 条真实的 `SKILL.md` 变更，逐条用规则跑了一遍：
 
-| 变更类型 | 报出 / 实际 |
-|---|---:|
-| description 被改 | 44 / 44 |
-| name 被改 | 18 / 18 |
-| 目录移动 | 20 / 20 |
-| 新增脚本 | 13 / 13 |
+| 变更类型         | 报出 / 实际 |
+| ---------------- | ----------: |
+| description 被改 |     44 / 44 |
+| name 被改        |     18 / 18 |
+| 目录移动         |     20 / 20 |
+| 新增脚本         |     13 / 13 |
 
 在这批数据里，有 37 次上游改动删掉了 description 里原有的词，16 次改了 name，3 次改完之后的新版本会被 dsh 直接丢弃。数据集、复现方法和规则调整见 [research/EVAL.md](research/EVAL.md)。
 
@@ -123,9 +139,9 @@ git clone <this repo> && cd skill-healthcheck && npm install && npm run build &&
 
 ## 平台支持
 
-| 平台 | 支持程度 |
-|---|---|
-| DeepSeek Harness（dsh） | 完整：照搬 dsh 的扫描顺序和解析规则、会话日志回填、插件和宿主检查 |
+| 平台                                       | 支持程度                                                                         |
+| ------------------------------------------ | -------------------------------------------------------------------------------- |
+| DeepSeek Harness（dsh）                    | 完整：照搬 dsh 的扫描顺序和解析规则、会话日志回填、插件和宿主检查                |
 | 通用 Agent Skills（Claude Code、Codex 等） | 扫描 `.agents/skills`、`.claude/skills`、`~/.codex/skills`，做本地检查和上游检查 |
 
 检测到 `~/.dsh/profiles` 时自动进入 dsh 模式，也可以用 `--platform` 指定。

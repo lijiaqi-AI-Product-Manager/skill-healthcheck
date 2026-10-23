@@ -1,6 +1,22 @@
 # skill-healthcheck
 
-English | [中文](README.md)
+English | [中文](README.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md) | [Português](README.pt-BR.md)
+
+<p align="center">
+  <a href="https://github.com/lijiaqimun-coder/skill-healthcheck/actions/workflows/ci.yml"><img src="https://github.com/lijiaqimun-coder/skill-healthcheck/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <img src="https://img.shields.io/badge/node-22.19%2B-brightgreen" alt="Node 22.19+">
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT">
+  <img src="https://img.shields.io/badge/platforms-linux%20%7C%20macos%20%7C%20windows-lightgrey" alt="Linux, macOS, Windows">
+  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome">
+</p>
+
+<p align="center">
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&pause=1200&color=3FB950&center=true&vCenter=true&width=720&lines=Find+skills+that+silently+stopped+working;Know+when+your+agent%27s+behavior+changed" alt="Find skills that silently stopped working">
+</p>
+
+<p align="center">
+  <img src="docs/demo.gif" alt="skill-healthcheck demo: a skill's description changes upstream, and why attributes the behavior change" width="900">
+</p>
 
 > Has your agent gotten dumber lately? It might be the skill you installed three weeks ago.
 
@@ -12,7 +28,7 @@ When a plugin breaks, you know immediately: it won't install, it throws errors, 
 
 One command, one checkup, one screen of output. Read-only, and it never updates anything by itself.
 
-```
+```text
 $ skill-healthcheck
 skill-healthcheck · DeepSeek Harness · profile desktop · 2026-10-23 11:57
 宿主  dsh 0.2.1-rc.2 ✓
@@ -51,14 +67,14 @@ git clone <this repo> && cd skill-healthcheck && npm install && npm run build &&
 
 ## Usage
 
-| Command | What it does |
-|---|---|
-| `skill-healthcheck` | One-screen checkup: host, plugins, skills |
-| `skill-healthcheck why "<symptom>"` | Work backward along the timeline to suspicious skills, e.g. `why "不用中文回答了"`; also accepts `--since 2026-10-01` |
-| `skill-healthcheck log` | Journal of what was installed, what changed, and when (`~` marks times estimated from file mtimes) |
-| `skill-healthcheck ls` | Which skills the platform will actually load, which are shadowed, which are dropped |
-| `skill-healthcheck adopt <name> <source>` | Register a skill's source: `github:owner/repo/path`, a GitHub URL, or `<git-url>#<path>` |
-| `skill-healthcheck record` | Record a single snapshot (for hooks and scheduled jobs) |
+| Command                                   | What it does                                                                                                          |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `skill-healthcheck`                       | One-screen checkup: host, plugins, skills                                                                             |
+| `skill-healthcheck why "<symptom>"`       | Work backward along the timeline to suspicious skills, e.g. `why "不用中文回答了"`; also accepts `--since 2026-10-01` |
+| `skill-healthcheck log`                   | Journal of what was installed, what changed, and when (`~` marks times estimated from file mtimes)                    |
+| `skill-healthcheck ls`                    | Which skills the platform will actually load, which are shadowed, which are dropped                                   |
+| `skill-healthcheck adopt <name> <source>` | Register a skill's source: `github:owner/repo/path`, a GitHub URL, or `<git-url>#<path>`                              |
+| `skill-healthcheck record`                | Record a single snapshot (for hooks and scheduled jobs)                                                               |
 
 Common options: `--all` expand everything, `--json` machine-readable, `--offline` no network, `--no-sessions` skip session logs, `--platform dsh|generic`, `--profile <name>`, `--cwd <project dir>`.
 
@@ -68,26 +84,26 @@ Common options: `--all` expand everything, `--json` machine-readable, `--offline
 
 **Skills: local (offline, deterministic)**
 
-| Problem | Why it fails silently |
-|---|---|
-| Invalid frontmatter (name isn't kebab-case, a boolean is misspelled, an old field name is used) | dsh drops the entire skill and only logs a single warning line |
-| Shadowed by a same-name skill | A skill of the same name under the project-level `.dsh/skills` shadows the one you installed globally |
-| Nested too deep | Only `<root>/<name>/SKILL.md` is recognized; clone a whole skill repo in there and none of them take effect |
-| Wrong directory | dsh doesn't scan `~/.claude/skills` or `~/.codex/skills` |
-| description over 500 characters | It gets truncated in the catalog, so the model never sees the trigger words at the end |
-| Used to be invoked often, then one day never again | Evidence from the session log beats any inference |
+| Problem                                                                                         | Why it fails silently                                                                                       |
+| ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Invalid frontmatter (name isn't kebab-case, a boolean is misspelled, an old field name is used) | dsh drops the entire skill and only logs a single warning line                                              |
+| Shadowed by a same-name skill                                                                   | A skill of the same name under the project-level `.dsh/skills` shadows the one you installed globally       |
+| Nested too deep                                                                                 | Only `<root>/<name>/SKILL.md` is recognized; clone a whole skill repo in there and none of them take effect |
+| Wrong directory                                                                                 | dsh doesn't scan `~/.claude/skills` or `~/.codex/skills`                                                    |
+| description over 500 characters                                                                 | It gets truncated in the catalog, so the model never sees the trigger words at the end                      |
+| Used to be invoked often, then one day never again                                              | Evidence from the session log beats any inference                                                           |
 
 **Skills: upstream (git, any hosting platform)**
 
-| Upstream change | Impact |
-|---|---|
-| `description` changed | ⚠ Highest risk: the trigger conditions changed and the skill may never be invoked again. It lists the words removed and added, and flags language/tone rules |
-| `name` changed / directory moved | The `/old-name` entry point stops working; it tells you the new one |
-| Repo deleted / skill deleted | Your local copy is now unmaintained (only an explicit 404 counts as deleted; network failures report "couldn't check") |
-| New executable in `scripts/` | A human needs to review the code |
-| description grew longer or over the limit | It gets truncated, or takes up more context on every turn |
-| Body grew | How many extra tokens each invocation takes (the body loads on demand, so it doesn't crowd out other skills) |
-| New platform-specific syntax | PowerShell cmdlets, `brew`, `/usr/bin`, for example — it may not run on your system |
+| Upstream change                           | Impact                                                                                                                                                       |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `description` changed                     | ⚠ Highest risk: the trigger conditions changed and the skill may never be invoked again. It lists the words removed and added, and flags language/tone rules |
+| `name` changed / directory moved          | The `/old-name` entry point stops working; it tells you the new one                                                                                          |
+| Repo deleted / skill deleted              | Your local copy is now unmaintained (only an explicit 404 counts as deleted; network failures report "couldn't check")                                       |
+| New executable in `scripts/`              | A human needs to review the code                                                                                                                             |
+| description grew longer or over the limit | It gets truncated, or takes up more context on every turn                                                                                                    |
+| Body grew                                 | How many extra tokens each invocation takes (the body loads on demand, so it doesn't crowd out other skills)                                                 |
+| New platform-specific syntax              | PowerShell cmdlets, `brew`, `/usr/bin`, for example — it may not run on your system                                                                          |
 
 **Plugins (dsh)**: whether the plugins installed in a profile are compatible with the current dsh version (`engines.dsh` / peerDependencies), whether they run on a version exemption, whether npm has a newer release, and whether the author has deprecated them.
 
@@ -107,12 +123,12 @@ All of it is deterministic code with no LLM calls, so results are stable and tes
 
 We collected 74 real `SKILL.md` changes from 15 public skill repositories (anthropics/skills, obra/superpowers, vercel-labs/agent-skills, deepseek-ai/deepseek-harness, among others) and ran the rules over every one of them:
 
-| Change type | Reported / actual |
-|---|---:|
-| description changed | 44 / 44 |
-| name changed | 18 / 18 |
-| directory moved | 20 / 20 |
-| scripts added | 13 / 13 |
+| Change type         | Reported / actual |
+| ------------------- | ----------------: |
+| description changed |           44 / 44 |
+| name changed        |           18 / 18 |
+| directory moved     |           20 / 20 |
+| scripts added       |           13 / 13 |
 
 In this dataset, 37 upstream changes removed words that had been in the description, 16 renamed the skill, and 3 produced a new version that dsh drops outright. The dataset, reproduction steps, and rule tuning are in [research/EVAL.md](research/EVAL.md).
 
@@ -125,10 +141,10 @@ In this dataset, 37 upstream changes removed words that had been in the descript
 
 ## Platform support
 
-| Platform | Level of support |
-|---|---|
-| DeepSeek Harness (dsh) | Full: mirrors dsh's scan order and parsing rules, backfills session logs, checks plugins and the host |
-| Generic Agent Skills (Claude Code, Codex, etc.) | Scans `.agents/skills`, `.claude/skills`, `~/.codex/skills` and runs local plus upstream checks |
+| Platform                                        | Level of support                                                                                      |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| DeepSeek Harness (dsh)                          | Full: mirrors dsh's scan order and parsing rules, backfills session logs, checks plugins and the host |
+| Generic Agent Skills (Claude Code, Codex, etc.) | Scans `.agents/skills`, `.claude/skills`, `~/.codex/skills` and runs local plus upstream checks       |
 
 It switches to dsh mode automatically when `~/.dsh/profiles` is detected; you can also set it with `--platform`.
 
