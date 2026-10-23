@@ -16,6 +16,10 @@
 </p>
 
 <p align="center">
+  <img src="https://raw.githubusercontent.com/lijiaqimun-coder/skill-healthcheck/main/docs/demo.png" alt="skill-healthcheck: one checkup flags a skill whose upstream description changed" width="900">
+</p>
+
+<p align="center">
   <img src="https://raw.githubusercontent.com/lijiaqimun-coder/skill-healthcheck/main/docs/demo.gif" alt="skill-healthcheck 演示：上游改了 description，why 把行为变化归因到具体 skill" width="900">
 </p>
 
