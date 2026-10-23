@@ -1,0 +1,60 @@
+name: Bug report
+description: Something broke, crashed, or reported the wrong thing
+title: "[bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Before pasting any output, redact home directory paths, repository URLs you consider private, and anything that looks like a token.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `skill-healthcheck --version`
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS and Node version, plus what you run alongside it (dsh version, or Claude Code / Codex)
+      placeholder: Windows 11, Node 24.4, dsh 0.2.1-rc.2
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What did you expect, and what did you get instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Smallest sequence that shows the problem. A redacted `SKILL.md` or repository layout helps a lot.
+      placeholder: |
+        1. Install a skill from ...
+        2. Change its description upstream ...
+        3. Run `skill-healthcheck why "..."` ...
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Relevant output
+      description: The command output, or `skill-healthcheck --json` if the issue is about the data structure. Error messages and exit codes are useful.
+      render: text
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues for the same problem
+          required: true
+        - label: I am not reporting a security vulnerability (those go through SECURITY.md)
+          required: true

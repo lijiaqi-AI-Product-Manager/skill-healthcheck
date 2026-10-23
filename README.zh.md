@@ -71,6 +71,9 @@ npm install -g skill-healthcheck
 git clone https://github.com/lijiaqimun-coder/skill-healthcheck && cd skill-healthcheck && npm install && npm run build && npm link
 ```
 
+国内用 npmmirror 镜像通常更快：`npm install -g skill-healthcheck --registry=https://registry.npmmirror.com`
+
+
 ## 用法
 
 | 命令                                    | 作用                                                                                           |
@@ -235,6 +238,8 @@ node scripts/corpus-eval.mjs   # 在 74 条真实变更上跑影响规则（需�
 - [x] 中英文输出（`--lang`）
 - [x] 可选 `--explain`：用 Claude、DeepSeek 或任意 OpenAI 兼容模型，把每个改动翻成一句人话
 - [x] Claude Code 和 Codex 的会话日志回填
+
+欢迎贡献 —— 先读 [CONTRIBUTING.md](CONTRIBUTING.md)。安全问题请走 [SECURITY.md](SECURITY.md)，不要开公开 issue。
 
 ## License
 

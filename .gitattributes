@@ -1,0 +1,22 @@
+# Normalize line endings so Windows checkouts don't churn the whole tree.
+* text=auto eol=lf
+
+# Shell scripts and config must stay LF even on Windows.
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# PowerShell scripts use CRLF.
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets.
+*.gif binary
+*.png binary
+*.jpg binary
+*.tgz binary
+*.zip binary
+
+# Generated files: never show them in diffs or count them in language stats.
+dist/** linguist-generated=true
+package-lock.json linguist-generated=true

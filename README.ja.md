@@ -73,6 +73,9 @@ npm install -g skill-healthcheck
 git clone https://github.com/lijiaqimun-coder/skill-healthcheck && cd skill-healthcheck && npm install && npm run build && npm link
 ```
 
+中国本土では npmmirror ミラーのほうが速いことが多いです: `npm install -g skill-healthcheck --registry=https://registry.npmmirror.com`
+
+
 ## 使い方
 
 | コマンド | 動作 |
@@ -229,6 +232,8 @@ node scripts/corpus-eval.mjs   # run the impact rules over 74 real changes (buil
 - [x] 中国語と英語の出力（`--lang`）
 - [x] 任意の `--explain`: Claude、DeepSeek、OpenAI 互換モデルから変更ごとに一文
 - [x] Claude Code と Codex のセッションログ補完
+
+コントリビューション歓迎です。まず [CONTRIBUTING.md](CONTRIBUTING.md) をお読みください。セキュリティの問題は公開 issue ではなく [SECURITY.md](SECURITY.md) へ。
 
 ## License
 

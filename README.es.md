@@ -73,6 +73,9 @@ Desde el código fuente:
 git clone https://github.com/lijiaqimun-coder/skill-healthcheck && cd skill-healthcheck && npm install && npm run build && npm link
 ```
 
+En China continental el espejo npmmirror suele instalar más rápido: `npm install -g skill-healthcheck --registry=https://registry.npmmirror.com`
+
+
 ## Uso
 
 | Comando | Qué hace |
@@ -229,6 +232,8 @@ node scripts/corpus-eval.mjs   # run the impact rules over 74 real changes (buil
 - [x] Salida en chino e inglés (`--lang`)
 - [x] `--explain` opcional: una frase por cambio desde Claude, DeepSeek o cualquier modelo compatible con OpenAI
 - [x] Relleno de registros de sesión de Claude Code y Codex
+
+Las contribuciones son bienvenidas: lee [CONTRIBUTING.md](CONTRIBUTING.md) primero. Para problemas de seguridad usa [SECURITY.md](SECURITY.md) en lugar de un issue público.
 
 ## License
 

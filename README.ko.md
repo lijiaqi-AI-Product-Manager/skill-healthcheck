@@ -73,6 +73,9 @@ npm install -g skill-healthcheck
 git clone https://github.com/lijiaqimun-coder/skill-healthcheck && cd skill-healthcheck && npm install && npm run build && npm link
 ```
 
+중국 본토에서는 npmmirror 미러가 보통 더 빠릅니다: `npm install -g skill-healthcheck --registry=https://registry.npmmirror.com`
+
+
 ## 사용법
 
 | 명령 | 하는 일 |
@@ -229,6 +232,8 @@ node scripts/corpus-eval.mjs   # run the impact rules over 74 real changes (buil
 - [x] 중국어와 영어 출력(`--lang`)
 - [x] 선택적 `--explain`: Claude, DeepSeek, OpenAI 호환 모델에서 변경마다 한 문장
 - [x] Claude Code와 Codex 세션 로그 채우기
+
+기여를 환영합니다. 먼저 [CONTRIBUTING.md](CONTRIBUTING.md)를 읽어 주세요. 보안 문제는 공개 이슈 대신 [SECURITY.md](SECURITY.md)를 이용해 주세요.
 
 ## License
 
