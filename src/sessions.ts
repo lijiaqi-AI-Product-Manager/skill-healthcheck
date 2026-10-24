@@ -13,9 +13,12 @@ import type { Store } from './journal.js'
  * read it off the namespace instead: older runtimes get a clear version message from the CLI
  * rather than a SyntaxError, and this module still loads for `--version` / `--help`.
  */
-const zstdDecompress: ((buffer: Buffer) => Buffer) | undefined = (
-  zlib as unknown as { zstdDecompressSync?: (buffer: Buffer) => Buffer }
+const zstdDecompress: ((buffer: Buffer, options?: { maxOutputLength?: number }) => Buffer) | undefined = (
+  zlib as unknown as { zstdDecompressSync?: (buffer: Buffer, options?: { maxOutputLength?: number }) => Buffer }
 ).zstdDecompressSync
+
+/** Decompressed sessions beyond this are treated as unreadable instead of exhausting memory. */
+const MAX_SESSION_OUTPUT = 512 * 1024 * 1024
 
 /** True when this Node can read dsh's compressed session logs. */
 export function zstdSupported(): boolean {
@@ -163,7 +166,7 @@ export function summarizeSessionFile(file: string, format: SessionFormat = 'dsh'
   try {
     const buf = readFileSync(file)
     if (!file.endsWith('.zstd')) text = buf.toString('utf8')
-    else if (zstdDecompress) text = zstdDecompress(buf).toString('utf8')
+    else if (zstdDecompress) text = zstdDecompress(buf, { maxOutputLength: MAX_SESSION_OUTPUT }).toString('utf8')
     else return undefined // pre-22.15 Node: the CLI has already told the user to upgrade
   } catch {
     return undefined
@@ -467,17 +470,25 @@ export function catalogTimeline(sessions: SessionSummary[]): CatalogTimeline {
 }
 
 /**
- * Digests decide when both sides have one. Otherwise compare text, but a catalog that cut a
- * description shorter (Codex bounds its list, dsh caps at 500) is not a change.
+ * Digests decide when both sides have one. Otherwise compare text: a catalog that cut a
+ * description shorter is not a change, but only when the shorter text looks cut — it ends
+ * with an ellipsis, or it is already as long as the smallest catalog cap. A short
+ * "Write docs" -> "Write docs. Always respond in English" is a real rule being added.
  */
+const TRUNCATION_FLOOR = 200
+
 function entryChanged(a: CatalogEntry, b: CatalogEntry): boolean {
   if (a.digest && b.digest) return a.digest !== b.digest
   if (!a.description || !b.description) return false
   if (a.description === b.description) return false
+  const looksCut = (s: string) => /(\.\.\.|…)\s*$/.test(s)
   const strip = (s: string) => s.replace(/(\.\.\.|…)$/, '').trim()
   const x = strip(a.description)
   const y = strip(b.description)
-  return !(x.startsWith(y) || y.startsWith(x))
+  if (x === y) return false
+  const [short, long, shortRaw] = x.length <= y.length ? [x, y, a.description] : [y, x, b.description]
+  if (!long.startsWith(short)) return true
+  return !(looksCut(shortRaw) || short.length >= TRUNCATION_FLOOR)
 }
 
 export interface UsageStats {

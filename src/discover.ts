@@ -2,7 +2,7 @@ import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'n
 import { basename, join, relative } from 'node:path'
 import { dialectOf, parseSkillText } from './frontmatter.js'
 import { t } from './i18n.js'
-import type { InstalledSkill, Inventory, NestedSkillDir, PlatformInfo, SkillEntry, SkillRoot } from './types.js'
+import type { InstalledSkill, Inventory, NestedSkillDir, PlatformInfo, ScanError, SkillEntry, SkillRoot } from './types.js'
 
 const NESTED_SEARCH_DEPTH = 3
 /** codex-rs ext/skills loader: MAX_SCAN_DEPTH (entries below the root) and MAX_SKILLS_DIRS_PER_ROOT. */
@@ -13,16 +13,20 @@ const CODEX_MAX_DIRS = 2000
  * List a root's skills the way its agent does. dsh and Claude Code read `<root>/<name>/SKILL.md`
  * (dsh also `<root>/<name>.md`); Codex walks the tree, skipping hidden folders.
  */
-export function scanRoot(root: SkillRoot): { entries: SkillEntry[]; nested: NestedSkillDir[] } {
+export function scanRoot(root: SkillRoot): { entries: SkillEntry[]; nested: NestedSkillDir[]; errors: ScanError[] } {
   const dialect = dialectOf(root.agent)
   if (dialect === 'codex') return scanCodexRoot(root)
   const entries: SkillEntry[] = []
   const nested: NestedSkillDir[] = []
+  const errors: ScanError[] = []
   let names: string[]
   try {
     names = readdirSync(root.path)
-  } catch {
-    return { entries, nested }
+  } catch (error) {
+    // "No such directory" is normal (most project roots don't exist). Anything else means
+    // the check could not see this root at all, which must not look like "all healthy".
+    if (!isMissing(error)) errors.push({ path: root.path, reason: reasonOf(error) })
+    return { entries, nested, errors }
   }
   const skip = new Set((root.skipDirs ?? []).map((d) => d.toLowerCase()))
   for (const name of names.sort((a, b) => a.localeCompare(b))) {
@@ -34,7 +38,7 @@ export function scanRoot(root: SkillRoot): { entries: SkillEntry[]; nested: Nest
     const kind = entryKind(full)
     if (kind === 'directory') {
       const file = join(full, 'SKILL.md')
-      const raw = readText(file)
+      const raw = readText(file, errors)
       if (raw === undefined) {
         if (!name.startsWith('.')) {
           const found = findNestedSkills(full, NESTED_SEARCH_DEPTH)
@@ -49,17 +53,18 @@ export function scanRoot(root: SkillRoot): { entries: SkillEntry[]; nested: Nest
           : parseSkillText(raw, { dialect, dirName: name })
       entries.push({ root, entryName: name, file, dir: full, kind: 'bundle', raw, parse })
     } else if (dialect === 'dsh' && kind === 'file' && name.endsWith('.md')) {
-      const raw = readText(full)
+      const raw = readText(full, errors)
       if (raw === undefined) continue
       entries.push({ root, entryName: name, file: full, dir: root.path, kind: 'flat', raw, parse: parseSkillText(raw) })
     }
   }
-  return { entries, nested }
+  return { entries, nested, errors }
 }
 
 /** codex-rs `discover_skills` in recursive mode: every SKILL.md up to six levels down, hidden folders pruned. */
-function scanCodexRoot(root: SkillRoot): { entries: SkillEntry[]; nested: NestedSkillDir[] } {
+function scanCodexRoot(root: SkillRoot): { entries: SkillEntry[]; nested: NestedSkillDir[]; errors: ScanError[] } {
   const entries: SkillEntry[] = []
+  const errors: ScanError[] = []
   const tooDeep = new Map<string, string[]>()
   const seen = new Set<string>()
   let dirs = 0
@@ -67,7 +72,8 @@ function scanCodexRoot(root: SkillRoot): { entries: SkillEntry[]; nested: Nested
     let real: string
     try {
       real = realpathSync.native(dir)
-    } catch {
+    } catch (error) {
+      if (!isMissing(error)) errors.push({ path: dir, reason: reasonOf(error) })
       return
     }
     if (seen.has(real) || dirs++ >= CODEX_MAX_DIRS) return
@@ -75,7 +81,8 @@ function scanCodexRoot(root: SkillRoot): { entries: SkillEntry[]; nested: Nested
     let names: string[]
     try {
       names = readdirSync(dir)
-    } catch {
+    } catch (error) {
+      if (!isMissing(error)) errors.push({ path: dir, reason: reasonOf(error) })
       return
     }
     for (const name of names.sort((a, b) => a.localeCompare(b))) {
@@ -84,7 +91,7 @@ function scanCodexRoot(root: SkillRoot): { entries: SkillEntry[]; nested: Nested
       const kind = entryKind(full)
       if (kind === 'file' && name === 'SKILL.md') {
         if (depth + 1 <= CODEX_SCAN_DEPTH) {
-          const raw = readText(full)
+          const raw = readText(full, errors)
           if (raw === undefined) continue
           const entryName = relative(root.path, dir).replaceAll('\\', '/') || basename(dir)
           entries.push({ root, entryName, file: full, dir, kind: 'bundle', raw, parse: parseSkillText(raw, { dialect: 'codex', dirName: basename(dir) }) })
@@ -101,18 +108,20 @@ function scanCodexRoot(root: SkillRoot): { entries: SkillEntry[]; nested: Nested
   }
   walk(root.path, 0)
   const nested = [...tooDeep].map(([dir, found]) => ({ root, dir, found: found.sort(), depthLimit: CODEX_SCAN_DEPTH }))
-  return { entries, nested }
+  return { entries, nested, errors }
 }
 
 export function buildInventory(platform: PlatformInfo): Inventory {
   const all: SkillEntry[] = []
   const nested: NestedSkillDir[] = []
+  const errors: ScanError[] = []
   const seenRoots = new Set<string>()
   for (const root of mergeDuplicateRoots(platform.roots)) {
     seenRoots.add(canonical(root.path))
     const scanned = scanRoot(root)
     all.push(...scanned.entries)
     nested.push(...scanned.nested)
+    errors.push(...scanned.errors)
   }
 
   const dropped = all.filter((e) => !e.parse.ok)
@@ -142,11 +151,12 @@ export function buildInventory(platform: PlatformInfo): Inventory {
   const unscanned: Inventory['unscanned'] = []
   for (const root of platform.unscannedRoots) {
     if (seenRoots.has(canonical(root.path))) continue
-    const { entries } = scanRoot({ path: root.path, source: root.source, rank: Number.MAX_SAFE_INTEGER })
-    const missing = entries.filter((e) => !e.parse.ok || !activeNames.has(e.parse.skill.name))
+    const scanned = scanRoot({ path: root.path, source: root.source, rank: Number.MAX_SAFE_INTEGER })
+    errors.push(...scanned.errors)
+    const missing = scanned.entries.filter((e) => !e.parse.ok || !activeNames.has(e.parse.skill.name))
     if (missing.length > 0) unscanned.push({ root, entries: missing })
   }
-  return { platform, active, shadowed, dropped, nested, unscanned }
+  return { platform, active, shadowed, dropped, nested, unscanned, errors }
 }
 
 /**
@@ -203,12 +213,23 @@ function entryKind(path: string): 'directory' | 'file' | undefined {
   return undefined
 }
 
-function readText(path: string): string | undefined {
+function readText(path: string, errors?: ScanError[]): string | undefined {
   try {
     return readFileSync(path, 'utf8')
-  } catch {
+  } catch (error) {
+    // A missing SKILL.md is normal; an unreadable one means this skill was not checked.
+    if (errors && !isMissing(error)) errors.push({ path, reason: reasonOf(error) })
     return undefined
   }
+}
+
+/** ENOENT is "this root doesn't exist", which is normal. Everything else is a failed scan. */
+function isMissing(error: unknown): boolean {
+  return (error as NodeJS.ErrnoException)?.code === 'ENOENT'
+}
+
+function reasonOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }
 
 function canonical(path: string): string {

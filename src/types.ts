@@ -75,6 +75,11 @@ export interface NestedSkillDir {
   depthLimit?: number
 }
 
+export interface ScanError {
+  path: string
+  reason: string
+}
+
 export interface Inventory {
   platform: PlatformInfo
   active: InstalledSkill[]
@@ -83,6 +88,8 @@ export interface Inventory {
   nested: NestedSkillDir[]
   /** Skills sitting in directories the platform does not scan. */
   unscanned: Array<{ root: UnscannedRoot; entries: SkillEntry[] }>
+  /** Roots or files we could not read (not "did not exist"): the check is incomplete there. */
+  errors: ScanError[]
 }
 
 export type Severity = 'critical' | 'high' | 'medium' | 'low' | 'info'

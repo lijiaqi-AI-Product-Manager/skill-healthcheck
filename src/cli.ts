@@ -121,7 +121,7 @@ async function main(argv: string[]): Promise<number> {
       const result = why({ symptom, since, inventory, journal: store.readJournal(), store, sessions, timeline: catalogTimeline(sessions) })
       if (values.explain && !values.offline) {
         progress(t('progress.explain', 1))
-        await explainWhy(result, symptom ?? '', true, store)
+        await explainWhy(result, true, store)
         progress('')
       }
       console.log(values.json ? JSON.stringify(result, null, 2) : renderWhy(result, symptom))
@@ -167,7 +167,7 @@ async function adoptRepo(spec: string, options: CheckOptions, force: boolean): P
     console.log(t('cli.nothingToAdopt'))
     return 0
   }
-  const checker = new UpstreamChecker(store, { onFetch: (url) => progress(t('cli.fetching', url)) })
+  const checker = new UpstreamChecker(store, { offline: options.offline, onFetch: (url) => progress(t('cli.fetching', url)) })
   const result = await matchRepoSkills(checker, parsed, candidates)
   progress('')
   if (!result.ok) {

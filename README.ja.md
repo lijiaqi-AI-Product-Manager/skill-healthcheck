@@ -161,7 +161,7 @@ Codex の場合は、cron かタスクスケジューラから 1 日 1 回 `skil
 | 同名の skill による影 | dsh はプロジェクト側のコピー、Claude Code は個人側のコピーが優先。Codex は両方を列挙し、モデルが誤って選ぶことがある |
 | ネストが深すぎる | dsh と Claude Code は `<root>/<name>/SKILL.md` しか読まない。skill リポジトリごと clone すると 1 つも有効にならない |
 | 置き場所が違う | dsh は `~/.claude/skills` や `~/.codex/skills` を走査しない |
-| description がディレクトリ上限を超える | dsh は 500 文字、Codex は 1024 文字、Claude Code は 1536 文字で切り詰められ、末尾のトリガー語が失われる |
+| description がカタログ上限を超える | dsh は 500 文字、Codex は 1024 文字、Claude Code は 1536 文字で切り詰められ、末尾のトリガー語が失われる |
 | 以前はよく呼ばれていたのに、ある日から呼ばれない | セッションログの証拠はどんな推測よりも強い |
 
 **skill: 上流（git、任意のホスティング）**

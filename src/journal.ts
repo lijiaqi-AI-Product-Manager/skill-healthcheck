@@ -290,7 +290,9 @@ export function diffStates(before: SkillState, after: SkillState): StateDiff {
  * "remove" every project skill seen in project A.
  */
 export function partitionKey(source: string, projectRoot: string): string {
-  return source.startsWith('project-') ? `project:${projectRoot.replaceAll('\\', '/').toLowerCase()}` : 'user'
+  // Case folding only where the filesystem has it, or /tmp/Foo and /tmp/foo share a partition.
+  const fold = process.platform === 'win32' || process.platform === 'darwin' ? (s: string) => s.toLowerCase() : (s: string) => s
+  return source.startsWith('project-') ? `project:${fold(projectRoot.replaceAll('\\', '/'))}` : 'user'
 }
 
 /** Snapshot the inventory, append the diff to the journal, return the new events. */

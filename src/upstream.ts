@@ -77,7 +77,8 @@ export async function resolveProvenance(skill: InstalledSkill, platform: Platfor
   // 8.3 short names like C:\Users\RUNNER~1 (Windows) break relative(). Only .native expands 8.3.
   const target = realpathSync.native(skill.kind === 'bundle' ? skill.dir : skill.file)
   const subpath = relative(realpathSync.native(repo), target).replaceAll('\\', '/')
-  if (subpath.startsWith('..')) return { kind: 'unknown' }
+  // On Windows `relative` returns an absolute path when the two live on different drives.
+  if (isAbsolute(subpath) || subpath.startsWith('..')) return { kind: 'unknown' }
   return { kind: 'git', url: info.url, subpath, via: 'checkout', localRepo: repo }
 }
 
@@ -97,7 +98,13 @@ async function lookupRepo(root: string, cache?: ProvenanceCache): Promise<RepoIn
 
 /** Nearest ancestor (or the directory itself) that holds a .git entry; undefined outside a checkout. */
 export function findGitRoot(dir: string): string | undefined {
-  let current = resolve(dir)
+  let current: string
+  try {
+    // A symlinked skill folder belongs to the repo it really lives in, not the lexical path.
+    current = realpathSync.native(dir)
+  } catch {
+    current = resolve(dir)
+  }
   while (true) {
     if (existsSync(join(current, '.git'))) return current
     const parent = dirname(current)
@@ -163,7 +170,10 @@ export function isSafeGitUrl(url: string): boolean {
 
 /** Strip `user:token@` before a URL reaches a report, a log or a CI artifact. */
 export function redactUrl(url: string): string {
-  return url.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/@]+@/i, '$1***@')
+  return url
+    .replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/@]+@/i, '$1***@')
+    // ?access_token=… and friends never belong in a terminal, a JSON report or a CI log.
+    .replace(/([?&][^=&\s#]+=)[^&#\s]*/g, '$1***')
 }
 
 /** The same, for a sentence that embeds a URL (git puts the remote in its stderr). */
@@ -204,6 +214,8 @@ export class UpstreamChecker {
 
   /** Fetch a repo into the cache (shared with check()). */
   async fetchRepo(url: string, ref?: string): Promise<FetchOutcome> {
+    // `--offline` covers every command, including `adopt --repo`: it must not fetch either.
+    if (this.options.offline) return { ok: false, result: { state: 'unreachable', detail: t('up.offline') } }
     if (!isSafeGitUrl(url) || (ref !== undefined && !isSafeRef(ref))) {
       return { ok: false, result: { state: 'unreachable', detail: t('up.suspicious', redactUrl(url).slice(0, 80)) } }
     }
@@ -226,11 +238,16 @@ export class UpstreamChecker {
   private async fetch(url: string, ref?: string): Promise<FetchOutcome> {
     const gitDir = cacheDirFor(this.store, url)
     if (!existsSync(gitDir)) {
-      mkdirSync(join(this.store.dir, 'cache'), { recursive: true })
+      // A read-only data directory must degrade to "can't check", not kill the whole run.
+      try {
+        mkdirSync(join(this.store.dir, 'cache'), { recursive: true })
+      } catch (error) {
+        return { ok: false, result: { state: 'unreachable', detail: redactText(String((error as Error).message ?? error)) } }
+      }
       const init = await git(['init', '--bare', '--quiet', gitDir])
       if (!init.ok) return { ok: false, result: { state: 'unreachable', detail: redactText(firstLine(init.stderr)) } }
     }
-    this.options.onFetch?.(url)
+    this.options.onFetch?.(redactUrl(url))
     // Fetch into our own ref rather than FETCH_HEAD, which the next fetch would overwrite.
     const local = `refs/shc/${createHash('sha1').update(ref ?? 'HEAD').digest('hex').slice(0, 12)}`
     const fetched = await git(
@@ -291,7 +308,14 @@ export async function matchRepoSkills(
     if (sameName.length) matches.push({ skill, subpath: best.subpath, by: 'name', score: best.score })
     else if (best.score >= 0.6) matches.push({ skill, subpath: best.subpath, by: 'content', score: best.score })
   }
-  return { ok: true, matches, repoSkills: files.length, truncated: all.length > files.length }
+  // One upstream path can only be the source of one local skill. Without this, similar
+  // skills all claim the same folder and adopt persists a wrong provenance for all of them.
+  const bySubpath = new Map<string, RepoMatch>()
+  for (const match of matches) {
+    const prev = bySubpath.get(match.subpath)
+    if (!prev || match.score > prev.score) bySubpath.set(match.subpath, match)
+  }
+  return { ok: true, matches: [...bySubpath.values()], repoSkills: files.length, truncated: all.length > files.length }
 }
 
 function cacheDirFor(store: Store, url: string): string {
@@ -318,6 +342,8 @@ async function compareSkill(repo: FetchedRepo, skill: InstalledSkill, prov: Extr
       if (result.state === 'changed') return { ...result, movedTo: subpath || '/' }
       return result
     }
+    // Found the new path but couldn't read it: that is a failed check, not a deletion.
+    if (!isMissingPath(raw.stderr)) return { state: 'unreachable', detail: redactText(firstLine(raw.stderr)) }
   }
   const log = await git(['--git-dir', gitDir, 'log', '-1', '--format=%H%x09%cI', commit, '--', file], { timeoutMs: 60_000 })
   const [deletedIn, date] = log.stdout.trim().split('\t')
@@ -425,23 +451,25 @@ async function scriptDiff(gitDir: string, commit: string, subpath: string, skill
   }
   return {
     added: Object.keys(upstream).filter((f) => !(f in local)).sort(),
-    changed: Object.keys(upstream).filter((f) => f in local && local[f] !== upstream[f]).sort(),
+    // A checkout can hold CRLF or LF: accept either hash for the same bytes.
+    changed: Object.keys(upstream).filter((f) => f in local && !local[f]!.includes(upstream[f]!)).sort(),
     removed: Object.keys(local).filter((f) => !(f in upstream)).sort(),
   }
 }
 
-async function localScriptShas(skill: InstalledSkill): Promise<Record<string, string>> {
+async function localScriptShas(skill: InstalledSkill): Promise<Record<string, string[]>> {
   const { listScripts } = await import('./discover.js')
   const { gitBlobSha } = await import('./journal.js')
   const { readFileSync } = await import('node:fs')
-  const out: Record<string, string> = {}
+  const out: Record<string, string[]> = {}
   for (const rel of listScripts(skill)) {
     try {
-      // Hash with LF endings: that's what's in the repo when autocrlf rewrote the checkout.
+      // Keep the raw hash (repo stores CRLF) and the LF hash (autocrlf rewrote the checkout).
       const buf = readFileSync(join(skill.dir, 'scripts', rel))
-      out[rel] = gitBlobSha(buf)
+      const shas = [gitBlobSha(buf)]
       const lf = Buffer.from(buf.toString('latin1').replace(/\r\n/g, '\n'), 'latin1')
-      if (lf.length !== buf.length) out[rel] = gitBlobSha(lf)
+      if (lf.length !== buf.length) shas.push(gitBlobSha(lf))
+      out[rel] = shas
     } catch {
       // unreadable: treat as absent
     }
@@ -505,7 +533,7 @@ export function similarity(a: string, b: string): number {
   return common / (la.size + lb.size - common)
 }
 
-async function classifyFetchFailure(url: string, stderr: string): Promise<UpstreamResult> {
+export async function classifyFetchFailure(url: string, stderr: string): Promise<UpstreamResult> {
   const detail = redactText(firstLine(stderr.replace(/^(remote|fatal): /gm, '')))
   // A local source path: a typo is a configuration problem, not "the repository was deleted".
   // Keep it informational so a stray metadata.source never turns CI red.
@@ -522,9 +550,12 @@ async function classifyFetchFailure(url: string, stderr: string): Promise<Upstre
     return { state: 'unreachable', detail }
   }
   const gh = /github\.com[/:]([\w.-]+)\/([\w.-]+?)(?:\.git)?\/?$/.exec(url)
-  const notFound = /repository '.*' not found|Repository not found|does not appear to be a git repository|not found/i.test(stderr)
-  const authOrMissing = /could not read Username|Authentication failed|terminal prompts disabled|Permission denied|403/i.test(stderr)
-  if (gh && (notFound || authOrMissing)) {
+  // "Repository not found" is also what GitHub says for a private repo to an anonymous
+  // client. An explicit auth failure must never be turned into "deleted" by the API's 404.
+  const authFailure = /could not read Username|Authentication failed|terminal prompts disabled|Permission denied|HTTP 403|403 Forbidden/i.test(stderr)
+  const notFound = /repository '.*' not found|Repository not found|does not appear to be a git repository/i.test(stderr)
+  if (gh && authFailure) return { state: 'unreachable', detail: t('up.ghAuth', detail) }
+  if (gh && notFound) {
     const api = await githubRepoStatus(gh[1]!, gh[2]!)
     if (api.state === 'missing') return { state: 'repo-missing', detail: t('up.gh404') }
     if (api.state === 'moved') return { state: 'repo-moved', newUrl: api.newUrl }

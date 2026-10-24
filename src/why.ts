@@ -34,8 +34,11 @@ export interface WhyResult {
   explain?: ExplainStatus
 }
 
-/** --explain for why: one sentence on how the top suspect's change could cause the complaint. */
-export async function explainWhy(result: WhyResult, symptom: string, explain: true | Provider, store: Store): Promise<void> {
+/**
+ * --explain for why: one sentence on what the top suspect's change means for the user.
+ * The complaint text is deliberately not sent: `--explain` promises skill text only.
+ */
+export async function explainWhy(result: WhyResult, explain: true | Provider, store: Store): Promise<void> {
   const provider = explain === true ? resolveProvider() : explain
   if (!provider) {
     result.explain = { used: false }
@@ -52,7 +55,6 @@ export async function explainWhy(result: WhyResult, symptom: string, explain: tr
       after: { name: top.name, description: top.change.to },
       removedWords: removed,
       addedWords: added,
-      symptom,
     })
     explainer.save()
   }
@@ -179,14 +181,18 @@ export function why(params: {
     if (!e.after) continue
     const afterText = params.store.getBlob(e.after.sha) ?? ''
     const beforeText = e.before ? (params.store.getBlob(e.before.sha) ?? '') : ''
-    const hits = newHits(e.kind === 'baseline' || e.kind === 'added' ? '' : beforeText, afterText, symptoms)
-    if (symptoms.length && hits.length === 0) continue
+    const before = e.kind === 'baseline' || e.kind === 'added' ? '' : beforeText
+    const hits = newHits(before, afterText, symptoms)
+    // Dropping a rule is evidence too, and the journal is the only place that sees it when
+    // there is no catalog history.
+    const lost = lostHits(before, afterText, symptoms)
+    if (symptoms.length && hits.length === 0 && lost.length === 0) continue
     if (!symptoms.length && e.kind === 'baseline') continue
     const verb = t(`why.verb.${e.kind}`)
     const when = `${localDay(e.t)}${e.estimated ? t('why.estimated') : ''}`
     const weight = e.kind === 'baseline' ? 0.6 : 1
     const change = e.before?.description !== undefined && e.after.description !== undefined && e.before.description !== e.after.description ? { from: e.before.description, to: e.after.description } : undefined
-    bump(e.name, ((symptoms.length ? hits.length * 2 : 0.5) + 1) * weight * proximity(e.t), e.t, `${when} ${verb}`, hits.map((h) => t('why.contains', h)), change)
+    bump(e.name, ((symptoms.length ? hits.length * 2 + lost.length * 1.5 : 0.5) + 1) * weight * proximity(e.t), e.t, `${when} ${verb}`, [...hits.map((h) => t('why.contains', h)), ...lost.map((h) => t('why.lost', h))], change)
   }
 
   // 3) Currently active skills whose text matches, even with no recorded change.

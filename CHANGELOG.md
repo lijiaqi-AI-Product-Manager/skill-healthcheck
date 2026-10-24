@@ -1,5 +1,48 @@
 # Changelog
 
+## 1.1.1
+
+Correctness release from an external review of 1.1.0. Three of the fixes are about promises
+the tool makes: `--explain` sends skill text only, `--offline` covers every command, and a
+failed read is never reported as a deletion.
+
+**Fixed**
+- **`why --explain` no longer sends the user's complaint to the LLM.** Only the before/after
+  skill text, the detected words and the finding codes are sent, as the README and SECURITY.md
+  always said.
+- **`adopt --repo` honours `--offline`** and creates no cache; `UpstreamChecker.fetchRepo`
+  refuses to fetch when offline, for every command.
+- **Authentication failures are not deletions.** A private GitHub repository that can't be
+  authenticated is reported as `unreachable` with an auth hint, never as `repo-missing`, and
+  the anonymous API's 404 is no longer used to confirm it. The generic `not found` match was
+  narrowed so `git-upload-pack: command not found` is not a missing repository either.
+- **A moved skill whose new path can't be read** reports `unreachable`, not `removed-upstream`;
+  the same is true when the data directory is read-only and the cache can't be created.
+- **`adopt --repo` maps one upstream path to one local skill.** Similar skills used to claim
+  the same folder and persist a wrong provenance for all of them.
+- **`went-quiet` only goes critical when the quiet sessions come after the change.** Three
+  quiet sessions before a description edit no longer count as evidence that the edit caused
+  the silence.
+- **Unreadable roots are reported (`scan-error`, high).** A permission or I/O failure no
+  longer looks like "this directory has no skills", so the check can't silently pass.
+- **Catalog truncation vs. a real edit**: a short `Write docs` → `Write docs. Always respond
+  in English` is a change again; only an ellipsis-marked cut or a cut near a catalog cap is
+  treated as truncation.
+- **`scripts-removed`** is a finding (medium) instead of falling back to `upstream-minor`.
+- **CRLF scripts are not "changed"** when the repository stores CRLF: the raw and LF blob
+  hashes are both accepted.
+- **Path identity**: a cross-drive `relative()` on Windows is "unknown" instead of a fake
+  subpath; project snapshot partitions case-fold only on Windows/macOS; `findGitRoot` resolves
+  symlinks before walking up.
+- **URLs are redacted in query values too** (`?access_token=…`), progress lines included.
+- **`ls` and `log` sanitize names and paths** like the rest of the report; C1 controls are
+  stripped as well as C0.
+- **zstd session output is capped** (512 MB) instead of decompressing without a bound.
+- **`why` journal evidence includes lost signals**: removing a rule in a skill the journal
+  recorded is now evidence, not silence.
+- **`docs/findings.md`**: exit code 1 also covers `high` findings; `scan-error` and
+  `scripts-removed` documented.
+
 ## 1.1.0
 
 Claude Code and Codex now get their own rules. Until 1.0.2, generic mode read their skills

@@ -11,6 +11,9 @@ const DAY = 86_400_000
 
 export function localFindings(inv: Inventory): Finding[] {
   const out: Finding[] = []
+  for (const e of inv.errors) {
+    out.push({ code: 'scan-error', severity: 'high', subject: e.path, message: t('local.scanError', e.path, e.reason), area: 'local' })
+  }
   for (const entry of inv.dropped) {
     if (!entry.parse.ok) {
       const name = entry.parse.rawName ?? entry.entryName.replace(/\.md$/, '')
@@ -112,16 +115,25 @@ export function usageFindings(inv: Inventory, sessions: SessionSummary[], timeli
     const change = timeline.changes
       .filter((c) => c.name === s.skill.name && c.t <= usage.lastCall! + 14 * DAY && usage.lastCall! >= c.prevT - DAY)
       .sort((a, b) => b.t - a.t)[0]
+    // The three quiet sessions have to come *after* the change; sessions before it only mean
+    // the skill was already unused when its description changed.
+    const quietAfterChange = change ? quietSessionsAfter(sessions, s.skill.name, change.t) : 0
+    const explainsSilence = change !== undefined && quietAfterChange >= QUIET_SESSIONS
     const detail = [t('usage.lastCall', localDay(usage.lastCall), usage.quietSessions)]
     if (change) detail.push(t('usage.descChangedOn', localDay(change.t)))
     out.push({
       code: 'went-quiet',
-      severity: change ? 'critical' : 'high',
+      severity: explainsSilence ? 'critical' : 'high',
       subject: s.skill.name,
-      message: change ? t('usage.quietAfterChange', usage.calls, localDay(change.t)) : t('usage.quiet', usage.calls, localDay(usage.lastCall)),
+      message: explainsSilence ? t('usage.quietAfterChange', usage.calls, localDay(change.t)) : t('usage.quiet', usage.calls, localDay(usage.lastCall)),
       detail,
       area: 'usage',
     })
   }
   return out
+}
+
+/** Sessions created after `since` whose catalog still listed the skill. */
+function quietSessionsAfter(sessions: SessionSummary[], name: string, since: number): number {
+  return sessions.filter((s) => (s.createdAt ?? 0) > since && s.catalogs.some((c) => c.entries.some((e) => e.name === name))).length
 }

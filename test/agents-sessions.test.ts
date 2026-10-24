@@ -85,9 +85,18 @@ describe('Codex backfill', () => {
     expect(Object.values(s.days)[0]!.asstLatin).toBeGreaterThan(10)
   })
 
-  it('does not call a shortened description a change', () => {
-    const lines = [...codexSession('a', T0, { skills: { x: 'Write clear documents for requirements' }, reply: EN }), ...codexSession('b', T0 + DAY, { skills: { x: 'Write clear documents' }, reply: EN })]
-    expect(catalogTimeline([summarizeCodexLines(jsonl(lines).split('\n'))]).changes).toEqual([])
+  it('reports a real edit but not a catalog cut', () => {
+    const shortEdit = [...codexSession('a', T0, { skills: { x: 'Write clear documents for requirements' }, reply: EN }), ...codexSession('b', T0 + DAY, { skills: { x: 'Write clear documents' }, reply: EN })]
+    expect(catalogTimeline([summarizeCodexLines(jsonl(shortEdit).split('\n'))]).changes).toHaveLength(1)
+
+    // A listing cut at the cap leaves the beginning of the text and ends with an ellipsis.
+    const cut = [...codexSession('c', T0, { skills: { x: 'Write clear documents for requirements' }, reply: EN }), ...codexSession('d', T0 + DAY, { skills: { x: 'Write clear documents for requirements…' }, reply: EN })]
+    expect(catalogTimeline([summarizeCodexLines(jsonl(cut).split('\n'))]).changes).toEqual([])
+
+    // The same holds for a long prefix that is almost certainly a cut at a catalog cap.
+    const long = 'A'.repeat(300)
+    const capped = [...codexSession('e', T0, { skills: { x: `${long} and more` }, reply: EN }), ...codexSession('f', T0 + DAY, { skills: { x: long }, reply: EN })]
+    expect(catalogTimeline([summarizeCodexLines(jsonl(capped).split('\n'))]).changes).toEqual([])
   })
 })
 

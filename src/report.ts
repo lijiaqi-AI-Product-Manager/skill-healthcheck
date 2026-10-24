@@ -149,7 +149,7 @@ function areaRank(f: Finding): number {
 export function safeText(s: string): string {
   return s
     .replace(/\x1b\[[0-9;?]*[ -/]*[@-~]/g, '') // ANSI escape sequences
-    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '') // C0 controls except \t
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/g, '') // C0/C1 controls except \t
 }
 
 function itemLine(symbol: string, subject: string, message: string): string {
@@ -207,17 +207,17 @@ const RUNTIME_SHOWN = 10
 export function renderInventory(inv: Inventory, runtimeSkills: string[] = [], options: { all?: boolean } = {}): string {
   const out: string[] = []
   out.push(c.bold(t('ls.header', inv.platform.label, inv.platform.projectRoot)))
-  for (const root of inv.platform.roots) out.push(c.dim(`  [${root.rank}] ${root.source.padEnd(15)} ${root.path}${root.agent ? `  (${root.agent})` : ''}`))
+  for (const root of inv.platform.roots) out.push(c.dim(`  [${root.rank}] ${root.source.padEnd(15)} ${safeText(root.path)}${root.agent ? `  (${root.agent})` : ''}`))
   out.push('')
-  for (const s of inv.active) out.push(`${c.green('●')} ${s.skill.name.padEnd(28)} ${c.dim(s.root.source)}${s.skill.invocation.modelInvocable ? '' : c.dim(t('ls.manual'))}`)
-  for (const s of inv.shadowed) out.push(`${c.yellow('○')} ${s.skill.name.padEnd(28)} ${c.dim(t('ls.shadowed', s.root.source, s.shadowedBy!.root.source))}`)
-  for (const d of inv.dropped) out.push(`${c.red('✗')} ${d.entryName.padEnd(28)} ${c.dim(d.parse.ok ? '' : d.parse.reason)}`)
-  for (const n of inv.nested) out.push(`${c.red('✗')} ${n.dir}  ${c.dim(t('ls.nested', n.found.length))}`)
-  for (const u of inv.unscanned) out.push(`${c.red('✗')} ${u.root.path}  ${c.dim(t('ls.unscanned', u.root.label, u.entries.length))}`)
+  for (const s of inv.active) out.push(`${c.green('●')} ${safeText(s.skill.name).padEnd(28)} ${c.dim(s.root.source)}${s.skill.invocation.modelInvocable ? '' : c.dim(t('ls.manual'))}`)
+  for (const s of inv.shadowed) out.push(`${c.yellow('○')} ${safeText(s.skill.name).padEnd(28)} ${c.dim(t('ls.shadowed', s.root.source, s.shadowedBy!.root.source))}`)
+  for (const d of inv.dropped) out.push(`${c.red('✗')} ${safeText(d.entryName).padEnd(28)} ${c.dim(safeText(d.parse.ok ? '' : d.parse.reason))}`)
+  for (const n of inv.nested) out.push(`${c.red('✗')} ${safeText(n.dir)}  ${c.dim(t('ls.nested', n.found.length))}`)
+  for (const u of inv.unscanned) out.push(`${c.red('✗')} ${safeText(u.root.path)}  ${c.dim(t('ls.unscanned', u.root.label, u.entries.length))}`)
   if (runtimeSkills.length) {
     out.push('', c.dim(t('ls.runtime', runtimeSkills.length)))
     const shown = options.all ? runtimeSkills : runtimeSkills.slice(0, RUNTIME_SHOWN)
-    for (const name of shown) out.push(`${c.cyan('◆')} ${name}`)
+    for (const name of shown) out.push(`${c.cyan('◆')} ${safeText(name)}`)
     if (shown.length < runtimeSkills.length) out.push(c.dim(`  ${t('r.more', runtimeSkills.length - shown.length).replace('skill-healthcheck --all', 'skill-healthcheck ls --all')}`))
   }
   return out.join('\n')
@@ -240,7 +240,7 @@ export function renderJournal(events: JournalEvent[]): string {
       if (e.note && !bits.length) bits.push(e.note)
       const time = new Date(e.t).toTimeString().slice(0, 5)
       const when = `${localDay(e.t)} ${time}${e.estimated ? '~' : ' '}`
-      return `${c.dim(when)} ${padDisplay(t(`log.kind.${e.kind}`), kindWidth)} ${e.name.padEnd(24)} ${c.dim(e.source ?? '')}  ${bits.join(t('log.join'))}`
+      return `${c.dim(when)} ${padDisplay(t(`log.kind.${e.kind}`), kindWidth)} ${safeText(e.name).padEnd(24)} ${c.dim(safeText(e.source ?? ''))}  ${safeText(bits.join(t('log.join')))}`
     })
     .join('\n')
 }
@@ -248,7 +248,7 @@ export function renderJournal(events: JournalEvent[]): string {
 export function renderWhy(result: WhyResult, symptom?: string): string {
   const out: string[] = []
   const topic = result.symptoms.length ? result.symptoms.map(symptomTitle).join(t('why.topicJoin')) : t('why.noSymptom')
-  out.push(c.bold(t('why.title', symptom ? ` "${symptom}"` : '', topic)))
+  out.push(c.bold(t('why.title', symptom ? ` "${safeText(symptom)}"` : '', topic)))
   if (result.onset) out.push(t('why.onset', result.onset.evidence))
   else if (result.since) out.push(t('why.since', localDay(result.since)))
   if (result.suspects.length === 0) {

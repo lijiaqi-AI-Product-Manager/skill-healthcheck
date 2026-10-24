@@ -2,14 +2,14 @@
 
 Every finding in `skill-healthcheck --json` has a stable `code`, a `severity` (`critical`, `high`, `medium`, `low`, `info`), an `area`, a `subject`, a localized `message` and optional `detail` lines. Build tooling on `code` and `severity`; `message` and `detail` follow `--lang`.
 
-`subject` is the skill or plugin name, except for `nested` (a path relative to its root) and `unscanned-root` (an absolute path).
+`subject` is the skill or plugin name, except for `nested` (a path relative to its root), `scan-error` and `unscanned-root` (absolute paths).
 
 ## Exit codes
 
 | Code | Meaning |
 |---|---|
 | `0` | Nothing is broken. Available upstream updates count as good: the tool cannot know whether a new description still triggers for you. |
-| `1` | A skill is `broken` (a local or usage finding at `critical`, or an orphan finding at `critical`/`high`), or a plugin is broken. |
+| `1` | A skill is `broken` (a local or usage finding at `critical` or `high`, or an orphan finding at `critical`/`high`), or a plugin is broken. |
 | `2` | Usage error: unknown command, bad `--lang`/`--platform`, unparseable `--since`, or a Node version below `engines`. |
 | `3` | The tool itself failed (unexpected exception). CI can tell this apart from a real finding. |
 
@@ -48,6 +48,7 @@ Finding codes are append-only: a code is never renamed or removed within 1.x, an
 | `shadowed` | high (info when identical) | Another skill with the same name wins (dsh, Claude Code: personal over project), or Codex lists both copies to the model |
 | `nested` | high | `SKILL.md` files deeper than the agent looks: `<root>/<name>/SKILL.md` for dsh and Claude Code, six levels for Codex; never discovered |
 | `unscanned-root` | high | Skills in a directory the platform doesn't read (e.g. `~/.claude/skills` for dsh) |
+| `scan-error` | high | A root or file could not be read (permissions, I/O, or a path that isn't a directory). The skills there were not checked; a missing directory is not an error |
 | `description-truncated` | medium | The description is longer than the catalog limit (dsh 500, Claude Code 1,536 including `when_to_use`, Codex 1,024); the end is cut off |
 | `frontmatter-ignored` | critical | Claude Code only: the frontmatter doesn't parse, so the skill loads with no fields. The model never sees the description; only `/name` works |
 | `no-description` | medium | Claude Code only: no `description`, so the body's first line is listed instead |
@@ -72,6 +73,7 @@ Finding codes are append-only: a code is never renamed or removed within 1.x, an
 | `description-grew` | low | The description grew a lot (costs catalog context every turn); checked on every platform |
 | `scripts-added` | high | New files under `scripts/`: review before use |
 | `scripts-changed` | medium | Existing scripts changed |
+| `scripts-removed` | medium | Files under `scripts/` disappeared upstream: calls from the skill text may now fail |
 | `body-grew` | low | The body grew by more than 2,000 characters (tokens per invocation) |
 | `platform-specific` | medium | New syntax that doesn't run on the current OS |
 | `moved-in-repo` | medium | The skill moved to another folder in its repository |

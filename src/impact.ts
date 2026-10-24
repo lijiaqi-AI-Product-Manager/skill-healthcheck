@@ -79,6 +79,10 @@ export function assessImpact(input: ImpactInput): Finding[] {
   if (input.scripts?.changed.length) {
     add('scripts-changed', 'medium', t('impact.scriptsChanged', input.scripts.changed.length), input.scripts.changed.map((f) => `scripts/${f}`))
   }
+  if (input.scripts?.removed.length) {
+    // A script the skill calls can disappear: that breaks the skill without touching its text.
+    add('scripts-removed', 'medium', t('impact.scriptsRemoved', input.scripts.removed.length), input.scripts.removed.map((f) => `scripts/${f}`))
+  }
 
   const bodyDelta = after.body.length - before.body.length
   if (bodyDelta > 2000) {
