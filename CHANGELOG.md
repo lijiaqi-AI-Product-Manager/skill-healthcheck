@@ -43,6 +43,11 @@ failed read is never reported as a deletion.
 - **`docs/findings.md`**: exit code 1 also covers `high` findings; `scan-error` and
   `scripts-removed` documented.
 
+**Changed**
+- The repository moved to `github.com/lijiaqi-AI-Product-Manager/skill-healthcheck`. Every
+  URL in the READMEs, package metadata, security policy, contribution guide and issue
+  templates points at the new owner.
+
 ## 1.1.0
 
 Claude Code and Codex now get their own rules. Until 1.0.2, generic mode read their skills
@@ -150,7 +155,7 @@ Maintenance release: no change to how any check behaves.
 
 **Packaging**
 - The published tarball now ships only `dist` plus the changelog; every `README.*.md`, `LICENSE` and `package.json` are still included automatically.
-- `prepare` is set, so installing straight from the repository (`npm install github:lijiaqimun-coder/skill-healthcheck`) builds the CLI instead of failing on a missing `dist/cli.js`.
+- `prepare` is set, so installing straight from the repository (`npm install github:lijiaqi-AI-Product-Manager/skill-healthcheck`) builds the CLI instead of failing on a missing `dist/cli.js`.
 - `vitest` moved from 3.2.7 to 5.0.5; the dependency audit is now clean.
 
 **Developer experience**

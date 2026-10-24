@@ -3,7 +3,7 @@
 [English](README.md) | [中文](README.zh.md) | [日本語](README.ja.md) | 한국어 | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md) | [Português](README.pt-BR.md)
 
 <p align="center">
-  <a href="https://github.com/lijiaqimun-coder/skill-healthcheck/actions/workflows/ci.yml"><img src="https://github.com/lijiaqimun-coder/skill-healthcheck/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck/actions/workflows/ci.yml"><img src="https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
   <a href="https://www.npmjs.com/package/skill-healthcheck"><img src="https://img.shields.io/npm/v/skill-healthcheck?color=blue" alt="npm version"></a>
   <img src="https://img.shields.io/badge/node-22.19%2B-brightgreen" alt="Node 22.19+">
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT">
@@ -14,11 +14,11 @@
 <p align="center"><b>조용히 멈춘 agent skill과 에이전트 동작이 언제 바뀌었는지 찾아냅니다.</b><br>Claude Code · Codex · DeepSeek Harness</p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/lijiaqimun-coder/skill-healthcheck/main/docs/demo.png" alt="skill-healthcheck: one checkup flags a skill whose upstream description changed" width="900">
+  <img src="https://raw.githubusercontent.com/lijiaqi-AI-Product-Manager/skill-healthcheck/main/docs/demo.png" alt="skill-healthcheck: one checkup flags a skill whose upstream description changed" width="900">
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/lijiaqimun-coder/skill-healthcheck/main/docs/demo.gif" alt="skill-healthcheck demo: a skill's description changes upstream, and why attributes the behavior change" width="900">
+  <img src="https://raw.githubusercontent.com/lijiaqi-AI-Product-Manager/skill-healthcheck/main/docs/demo.gif" alt="skill-healthcheck demo: a skill's description changes upstream, and why attributes the behavior change" width="900">
 </p>
 
 > 요즘 에이전트가 갑자기 멍청해졌나요? 3주 전에 설치한 그 skill이 원인일 수 있습니다.
@@ -79,7 +79,7 @@ npm install -g skill-healthcheck
 소스에서 설치하려면:
 
 ```bash
-git clone https://github.com/lijiaqimun-coder/skill-healthcheck && cd skill-healthcheck && npm install && npm run build && npm link
+git clone https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck && cd skill-healthcheck && npm install && npm run build && npm link
 ```
 
 중국 본토에서는 npmmirror 미러가 보통 더 빠릅니다: 위 두 명령 중 어느 쪽이든 `--registry=https://registry.npmmirror.com`를 붙이면 됩니다.

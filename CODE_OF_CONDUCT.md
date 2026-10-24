@@ -38,7 +38,7 @@ This Code of Conduct applies within all community spaces, and also applies when 
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the maintainers by opening a report at:
 
-<https://github.com/lijiaqimun-coder/skill-healthcheck/security/advisories/new>
+<https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck/security/advisories/new>
 
 or by contacting the maintainer directly through their GitHub profile. All complaints will be reviewed and investigated promptly and fairly. All maintainers are obligated to respect the privacy and security of the reporter of any incident.
 

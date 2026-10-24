@@ -3,7 +3,7 @@
 [English](README.md) | [中文](README.zh.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md) | Português
 
 <p align="center">
-  <a href="https://github.com/lijiaqimun-coder/skill-healthcheck/actions/workflows/ci.yml"><img src="https://github.com/lijiaqimun-coder/skill-healthcheck/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck/actions/workflows/ci.yml"><img src="https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
   <a href="https://www.npmjs.com/package/skill-healthcheck"><img src="https://img.shields.io/npm/v/skill-healthcheck?color=blue" alt="npm version"></a>
   <img src="https://img.shields.io/badge/node-22.19%2B-brightgreen" alt="Node 22.19+">
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT">
@@ -14,11 +14,11 @@
 <p align="center"><b>Encontre agent skills que pararam de funcionar em silêncio e quando o comportamento do seu agente mudou.</b><br>Claude Code · Codex · DeepSeek Harness</p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/lijiaqimun-coder/skill-healthcheck/main/docs/demo.png" alt="skill-healthcheck: one checkup flags a skill whose upstream description changed" width="900">
+  <img src="https://raw.githubusercontent.com/lijiaqi-AI-Product-Manager/skill-healthcheck/main/docs/demo.png" alt="skill-healthcheck: one checkup flags a skill whose upstream description changed" width="900">
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/lijiaqimun-coder/skill-healthcheck/main/docs/demo.gif" alt="skill-healthcheck demo: a skill's description changes upstream, and why attributes the behavior change" width="900">
+  <img src="https://raw.githubusercontent.com/lijiaqi-AI-Product-Manager/skill-healthcheck/main/docs/demo.gif" alt="skill-healthcheck demo: a skill's description changes upstream, and why attributes the behavior change" width="900">
 </p>
 
 > Seu agente ficou mais burro ultimamente? Pode ser aquele skill que você instalou três semanas atrás.
@@ -79,7 +79,7 @@ npm install -g skill-healthcheck
 A partir do código-fonte:
 
 ```bash
-git clone https://github.com/lijiaqimun-coder/skill-healthcheck && cd skill-healthcheck && npm install && npm run build && npm link
+git clone https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck && cd skill-healthcheck && npm install && npm run build && npm link
 ```
 
 Na China continental o espelho npmmirror costuma instalar mais rápido: adicione `--registry=https://registry.npmmirror.com` a qualquer um dos dois comandos.

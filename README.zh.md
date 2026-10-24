@@ -3,7 +3,7 @@
 [English](README.md) | 中文 | [日本語](README.ja.md) | [한국어](README.ko.md) | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md) | [Português](README.pt-BR.md)
 
 <p align="center">
-  <a href="https://github.com/lijiaqimun-coder/skill-healthcheck/actions/workflows/ci.yml"><img src="https://github.com/lijiaqimun-coder/skill-healthcheck/actions/workflows/ci.yml/badge.svg" alt="CI 状态"></a>
+  <a href="https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck/actions/workflows/ci.yml"><img src="https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck/actions/workflows/ci.yml/badge.svg" alt="CI 状态"></a>
   <a href="https://www.npmjs.com/package/skill-healthcheck"><img src="https://img.shields.io/npm/v/skill-healthcheck?color=blue" alt="npm version"></a>
   <img src="https://img.shields.io/badge/node-22.19%2B-brightgreen" alt="Node 22.19+">
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT">
@@ -14,11 +14,11 @@
 <p align="center"><b>找出悄悄失效的 agent 技能，以及 agent 的行为是从哪天开始变的。</b><br>Claude Code · Codex · DeepSeek Harness</p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/lijiaqimun-coder/skill-healthcheck/main/docs/demo.png" alt="skill-healthcheck: one checkup flags a skill whose upstream description changed" width="900">
+  <img src="https://raw.githubusercontent.com/lijiaqi-AI-Product-Manager/skill-healthcheck/main/docs/demo.png" alt="skill-healthcheck: one checkup flags a skill whose upstream description changed" width="900">
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/lijiaqimun-coder/skill-healthcheck/main/docs/demo.gif" alt="skill-healthcheck 演示：上游改了 description，why 把行为变化归因到具体 skill" width="900">
+  <img src="https://raw.githubusercontent.com/lijiaqi-AI-Product-Manager/skill-healthcheck/main/docs/demo.gif" alt="skill-healthcheck 演示：上游改了 description，why 把行为变化归因到具体 skill" width="900">
 </p>
 
 > 你的 agent 最近变笨了？可能是三周前装的那个 skill。
@@ -77,7 +77,7 @@ npm install -g skill-healthcheck
 从源码安装：
 
 ```bash
-git clone https://github.com/lijiaqimun-coder/skill-healthcheck && cd skill-healthcheck && npm install && npm run build && npm link
+git clone https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck && cd skill-healthcheck && npm install && npm run build && npm link
 ```
 
 国内用 npmmirror 镜像通常更快：在上面任一命令后面加 `--registry=https://registry.npmmirror.com`。

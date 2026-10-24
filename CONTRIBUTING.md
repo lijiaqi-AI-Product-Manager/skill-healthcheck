@@ -10,7 +10,7 @@ Thanks for taking the time to contribute. This document covers the practical bit
 ## Get set up
 
 ```bash
-git clone https://github.com/lijiaqimun-coder/skill-healthcheck
+git clone https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck
 cd skill-healthcheck
 npm ci
 npm run build

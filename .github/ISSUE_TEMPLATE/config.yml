@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
   - name: Report a security vulnerability
-    url: https://github.com/lijiaqimun-coder/skill-healthcheck/security/advisories/new
+    url: https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck/security/advisories/new
     about: Please report vulnerabilities privately, not in a public issue.
   - name: Finding codes for --json
-    url: https://github.com/lijiaqimun-coder/skill-healthcheck/blob/main/docs/findings.md
+    url: https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck/blob/main/docs/findings.md
     about: Stable codes emitted by --json, if you are building on top of the tool.
   - name: How the impact rules were validated
-    url: https://github.com/lijiaqimun-coder/skill-healthcheck/blob/main/research/EVAL.md
+    url: https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck/blob/main/research/EVAL.md
     about: The 74-change corpus, the method, and the rule tuning.

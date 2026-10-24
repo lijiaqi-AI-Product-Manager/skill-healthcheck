@@ -6,10 +6,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lijiaqimun-coder/skill-healthcheck.git"
+    "url": "git+https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck.git"
   },
-  "homepage": "https://github.com/lijiaqimun-coder/skill-healthcheck#readme",
-  "bugs": "https://github.com/lijiaqimun-coder/skill-healthcheck/issues",
+  "homepage": "https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck#readme",
+  "bugs": "https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck/issues",
   "bin": {
     "skill-healthcheck": "dist/cli.js"
   },

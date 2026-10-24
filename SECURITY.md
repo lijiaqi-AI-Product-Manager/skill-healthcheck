@@ -10,7 +10,7 @@
 
 Please **do not** open a public issue. Use GitHub's private reporting:
 
-<https://github.com/lijiaqimun-coder/skill-healthcheck/security/advisories/new>
+<https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck/security/advisories/new>
 
 Include the version (`skill-healthcheck --version`), your OS, and a minimal reproduction. If you can, say what an attacker gains — "arbitrary command execution via a malicious `metadata.source`" is far more useful than "it looks unsafe".
 

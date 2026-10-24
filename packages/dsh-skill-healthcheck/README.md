@@ -1,6 +1,6 @@
 # dsh-skill-healthcheck
 
-DeepSeek Harness plugin for [skill-healthcheck](https://github.com/lijiaqimun-coder/skill-healthcheck): find skills that silently stopped working, and when your agent's behavior changed.
+DeepSeek Harness plugin for [skill-healthcheck](https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck): find skills that silently stopped working, and when your agent's behavior changed.
 
 [中文说明](#中文)
 
@@ -45,7 +45,7 @@ Optional, in your profile's `cordis.patch.yml`:
 
 ## 中文
 
-[skill-healthcheck](https://github.com/lijiaqimun-coder/skill-healthcheck) 的 DeepSeek Harness 插件：找出悄悄失效的技能，以及 agent 行为是从什么时候开始变的。
+[skill-healthcheck](https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck) 的 DeepSeek Harness 插件：找出悄悄失效的技能，以及 agent 行为是从什么时候开始变的。
 
 **它在 dsh 里做两件事：**
 

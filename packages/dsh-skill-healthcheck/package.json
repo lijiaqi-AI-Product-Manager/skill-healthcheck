@@ -34,9 +34,9 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lijiaqimun-coder/skill-healthcheck.git",
+    "url": "git+https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck.git",
     "directory": "packages/dsh-skill-healthcheck"
   },
-  "homepage": "https://github.com/lijiaqimun-coder/skill-healthcheck/tree/main/packages/dsh-skill-healthcheck#readme",
-  "bugs": "https://github.com/lijiaqimun-coder/skill-healthcheck/issues"
+  "homepage": "https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck/tree/main/packages/dsh-skill-healthcheck#readme",
+  "bugs": "https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck/issues"
 }
