@@ -254,3 +254,33 @@ Contribuições são bem-vindas: leia [CONTRIBUTING.md](CONTRIBUTING.md) primeir
 ## License
 
 MIT
+
+<!-- project-growth:start -->
+
+## Crescimento do projeto
+
+O histórico de Stars é atualizado diariamente. As datas de atualização usam UTC; as datas de Stars seguem os agregados do GitHub. Também são exibidas as solicitações diárias de download no npm.
+
+<a href="https://github.com/lijiaqi-AI-Product-Manager/skill-healthcheck/stargazers">
+<picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/lijiaqi-AI-Product-Manager/lijiaqi-AI-Product-Manager/main/assets/growth/skill-healthcheck/stars-mobile-dark.svg">
+  <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/lijiaqi-AI-Product-Manager/lijiaqi-AI-Product-Manager/main/assets/growth/skill-healthcheck/stars-mobile-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/lijiaqi-AI-Product-Manager/lijiaqi-AI-Product-Manager/main/assets/growth/skill-healthcheck/stars-dark.svg">
+  <img src="https://raw.githubusercontent.com/lijiaqi-AI-Product-Manager/lijiaqi-AI-Product-Manager/main/assets/growth/skill-healthcheck/stars-light.svg" width="960" alt="skill-healthcheck · Histórico de Stars do GitHub">
+</picture>
+</a>
+
+<a href="https://www.npmjs.com/package/skill-healthcheck">
+<picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/lijiaqi-AI-Product-Manager/lijiaqi-AI-Product-Manager/main/assets/growth/skill-healthcheck/downloads-mobile-dark.svg">
+  <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/lijiaqi-AI-Product-Manager/lijiaqi-AI-Product-Manager/main/assets/growth/skill-healthcheck/downloads-mobile-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/lijiaqi-AI-Product-Manager/lijiaqi-AI-Product-Manager/main/assets/growth/skill-healthcheck/downloads-dark.svg">
+  <img src="https://raw.githubusercontent.com/lijiaqi-AI-Product-Manager/lijiaqi-AI-Product-Manager/main/assets/growth/skill-healthcheck/downloads-light.svg" width="960" alt="skill-healthcheck · Solicitações diárias de download">
+</picture>
+</a>
+
+As solicitações incluem acessos repetidos e automatizados; não equivalem a usuários únicos ou ativos.
+
+[Fontes de dados e definições das métricas](https://github.com/lijiaqi-AI-Product-Manager/lijiaqi-AI-Product-Manager/blob/main/docs/growth.md)
+
+<!-- project-growth:end -->
